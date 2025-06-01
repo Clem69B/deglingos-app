@@ -19,6 +19,7 @@ const schema = a.schema({
       allergies: a.string(),
       currentMedications: a.string(),
       consultations: a.hasMany('Consultation', 'patientId'),
+      Appointment: a.hasMany('Appointment', 'patientId'),
       invoices: a.hasMany('Invoice', 'patientId'),
       createdAt: a.datetime(),
       updatedAt: a.datetime(),
