@@ -68,7 +68,7 @@ const schema = a.schema({
       subtotal: a.float().required(),
       tax: a.float().default(0),
       total: a.float().required(),
-      status: a.enum(['DRAFT', 'SENT', 'PAID', 'OVERDUE']).default('DRAFT'),
+      status: a.enum(['DRAFT', 'SENT', 'PAID', 'OVERDUE']),
       paidAt: a.datetime(),
       notes: a.string(),
       createdAt: a.datetime(),

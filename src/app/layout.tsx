@@ -6,7 +6,7 @@ import { Providers } from './providers';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Degling\'OS - Cabinet Ostéopathie - Gestion',
+  title: 'DeglingOs - Cabinet Ostéopathie - Gestion',
   description: 'Application de gestion pour cabinet d\'ostéopathie',
 };
 
