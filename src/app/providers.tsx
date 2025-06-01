@@ -9,6 +9,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <Authenticator
       signUpAttributes={['given_name', 'family_name']}
       loginMechanisms={['email']}
+      hideSignUp
     >
       {({ signOut, user }) => (
         <div className="min-h-screen bg-gray-50">
