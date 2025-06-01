@@ -85,7 +85,7 @@ export default function NewPatientPage() {
 
     setLoading(true);
     try {
-      const patientData: any = {
+      const patientData: Partial<Schema['Patient']['type']> = {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
       };
@@ -327,10 +327,10 @@ export default function NewPatientPage() {
 
           {/* Emergency Contact */}
           <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Contact d'urgence</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Contact d&apos;urgence</h3>
             <div>
               <label htmlFor="emergencyContact" className="block text-sm font-medium text-gray-700">
-                Contact d'urgence
+                Contact d&apos;urgence
               </label>
               <input
                 type="text"

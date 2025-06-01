@@ -10,7 +10,7 @@ const client = generateClient<Schema>();
 
 export default function NewConsultationPage() {
   const router = useRouter();
-  const [patients, setPatients] = useState<any[]>([]);
+  const [patients, setPatients] = useState<Schema['Patient']['type'][]>([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     patientId: '',

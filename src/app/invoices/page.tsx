@@ -37,9 +37,9 @@ export default function InvoicesPage() {
               <div className="bg-yellow-50 p-4 rounded-lg">
                 <h4 className="font-medium text-yellow-900">Statistiques</h4>
                 <ul className="mt-2 text-sm text-yellow-700 space-y-1">
-                  <li>• Chiffre d'affaires</li>
+                  <li>• Chiffre d&apos;affaires</li>
                   <li>• Revenus par mois</li>
-                  <li>• Taux d'impayés</li>
+                  <li>• Taux d&apos;impayés</li>
                   <li>• Graphiques</li>
                 </ul>
               </div>

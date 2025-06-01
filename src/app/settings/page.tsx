@@ -53,14 +53,14 @@ export default function SettingsPage() {
               <div>
                 <h3 className="text-lg font-medium text-gray-900">Paramètres généraux</h3>
                 <p className="mt-1 text-sm text-gray-600">
-                  Configuration de base de l'application.
+                  Configuration de base de l&apos;application.
                 </p>
               </div>
               
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
-                    Langue de l'interface
+                    Langue de l&apos;interface
                   </label>
                   <select className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
                     <option value="fr" selected>Français</option>

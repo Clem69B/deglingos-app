@@ -12,7 +12,7 @@ export default function AppointmentsPage() {
           </div>
           <h3 className="mt-2 text-lg font-semibold text-gray-900">Agenda</h3>
           <p className="mt-1 text-sm text-gray-500">
-            Cette section permettra de gérer l'agenda et les rendez-vous.
+            Cette section permettra de gérer l&apos;agenda et les rendez-vous.
           </p>
           
           <div className="mt-6">
@@ -83,7 +83,7 @@ export default function AppointmentsPage() {
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-white border border-gray-200 p-4 rounded-lg text-center">
                 <div className="text-2xl font-bold text-gray-900">0</div>
-                <div className="text-sm text-gray-600">RDV aujourd'hui</div>
+                <div className="text-sm text-gray-600">RDV aujourd&apos;hui</div>
               </div>
               <div className="bg-white border border-gray-200 p-4 rounded-lg text-center">
                 <div className="text-2xl font-bold text-blue-600">0</div>

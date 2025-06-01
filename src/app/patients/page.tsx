@@ -8,10 +8,10 @@ import Link from 'next/link';
 const client = generateClient<Schema>();
 
 export default function PatientsPage() {
-  const [patients, setPatients] = useState<any[]>([]);
+  const [patients, setPatients] = useState<Schema['Patient']['type'][]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [filteredPatients, setFilteredPatients] = useState<any[]>([]);
+  const [filteredPatients, setFilteredPatients] = useState<Schema['Patient']['type'][]>([]);
 
   useEffect(() => {
     fetchPatients();

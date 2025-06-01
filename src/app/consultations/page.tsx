@@ -8,14 +8,14 @@ import Link from 'next/link';
 const client = generateClient<Schema>();
 
 export default function ConsultationsPage() {
-  const [consultations, setConsultations] = useState<any[]>([]);
-  const [patients, setPatients] = useState<any[]>([]);
+  const [consultations, setConsultations] = useState<Schema['Consultation']['type'][]>([]);
+  const [patients, setPatients] = useState<Schema['Patient']['type'][]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPatient, setSelectedPatient] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [loading, setLoading] = useState(true);
-  const [filteredConsultations, setFilteredConsultations] = useState<any[]>([]);
+  const [filteredConsultations, setFilteredConsultations] = useState<Schema['Consultation']['type'][]>([]);
 
   useEffect(() => {
     fetchData();
@@ -119,7 +119,7 @@ export default function ConsultationsPage() {
             Consultations
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Gérez l'historique des consultations de vos patients
+            Gérez l&apos;historique des consultations de vos patients
           </p>
         </div>
         <div className="mt-4 flex md:mt-0 md:ml-4">
@@ -195,7 +195,7 @@ export default function ConsultationsPage() {
             {/* Date de fin */}
             <div>
               <label htmlFor="dateTo" className="block text-sm font-medium text-gray-700">
-                Jusqu'au
+                Jusqu&apos;au
               </label>
               <input
                 type="date"

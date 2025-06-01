@@ -137,7 +137,7 @@ export default function Dashboard() {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">
-                    Consultations aujourd'hui
+                    Consultations aujourd&apos;hui
                   </dt>
                   <dd className="text-lg font-medium text-gray-900">
                     {stats.consultationsToday}
@@ -350,7 +350,7 @@ export default function Dashboard() {
               Aucune activité récente
             </h3>
             <p className="mt-1 text-sm text-gray-500">
-              L'activité des consultations, factures et rendez-vous apparaîtra
+              L&apos;activité des consultations, factures et rendez-vous apparaîtra
               ici.
             </p>
           </div>

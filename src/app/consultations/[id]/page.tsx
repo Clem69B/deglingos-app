@@ -3,15 +3,14 @@
 import { useEffect, useState } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../../amplify/data/resource';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 
 const client = generateClient<Schema>();
 
 export default function ConsultationDetailPage() {
   const params = useParams();
-  const router = useRouter();
-  const [consultation, setConsultation] = useState<any>(null);
+  const [consultation, setConsultation] = useState<Schema['Consultation']['type'] | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
 
