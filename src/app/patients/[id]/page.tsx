@@ -6,12 +6,10 @@ import type { Schema } from '../../../../amplify/data/resource';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
+import type { PatientDetail, ConsultationSummary, InvoiceSummary } from '../types';
+import type { UpdatePatientInput } from '../../types';
 
 const client = generateClient<Schema>();
-
-type Patient = Schema["Patient"]["type"];
-type Consultation = Schema["Consultation"]["type"];
-type Invoice = Schema["Invoice"]["type"];
 
 interface PatientFormData {
   firstName: string;
@@ -23,6 +21,7 @@ interface PatientFormData {
   city: string;
   postalCode: string;
   gender: 'M' | 'F' | 'OTHER' | '';
+  profession: string;
   emergencyContact: string;
   medicalHistory: string;
   allergies: string;
@@ -34,9 +33,9 @@ export default function PatientDetailPage() {
   const params = useParams();
   const patientId = params.id as string;
 
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [consultations, setConsultations] = useState<Consultation[]>([]);
-  const [unpaidInvoices, setUnpaidInvoices] = useState<Invoice[]>([]);
+  const [patient, setPatient] = useState<PatientDetail | null>(null);
+  const [consultations, setConsultations] = useState<ConsultationSummary[]>([]);
+  const [unpaidInvoices, setUnpaidInvoices] = useState<InvoiceSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -51,6 +50,7 @@ export default function PatientDetailPage() {
     city: '',
     postalCode: '',
     gender: '',
+    profession: '',
     emergencyContact: '',
     medicalHistory: '',
     allergies: '',
@@ -70,7 +70,7 @@ export default function PatientDetailPage() {
           return;
         }
 
-        const patientData = patientResponse.data;
+        const patientData = patientResponse.data as PatientDetail; // Cast to new type
         setPatient(patientData);
 
         // Initialize form data
@@ -84,6 +84,7 @@ export default function PatientDetailPage() {
           city: patientData.city || '',
           postalCode: patientData.postalCode || '',
           gender: patientData.gender || '',
+          profession: patientData.profession || '',
           emergencyContact: patientData.emergencyContact || '',
           medicalHistory: patientData.medicalHistory || '',
           allergies: patientData.allergies || '',
@@ -97,19 +98,19 @@ export default function PatientDetailPage() {
         if (consultationsResponse.data) {
           const sortedConsultations = consultationsResponse.data.sort(
             (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-          );
+          ) as ConsultationSummary[]; // Cast to new type
           setConsultations(sortedConsultations);
         }
 
         // Load unpaid invoices
         const invoicesResponse = await client.models.Invoice.list({
-          filter: { 
+          filter: {
             patientId: { eq: patientId },
             status: { ne: 'PAID' }
           },
         });
         if (invoicesResponse.data) {
-          setUnpaidInvoices(invoicesResponse.data);
+          setUnpaidInvoices(invoicesResponse.data as InvoiceSummary[]); // Cast to new type
         }
 
       } catch (error) {
@@ -164,7 +165,8 @@ export default function PatientDetailPage() {
 
     setSaving(true);
     try {
-      const updateData: Partial<Schema['Patient']['type']> = {
+      // Utiliser le nouveau type UpdatePatientInput
+      const updateData: UpdatePatientInput = {
         id: patientId,
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
@@ -178,15 +180,16 @@ export default function PatientDetailPage() {
       if (formData.city.trim()) updateData.city = formData.city.trim();
       if (formData.postalCode.trim()) updateData.postalCode = formData.postalCode.trim();
       if (formData.gender) updateData.gender = formData.gender;
+      if (formData.profession.trim()) updateData.profession = formData.profession.trim();
       if (formData.emergencyContact.trim()) updateData.emergencyContact = formData.emergencyContact.trim();
       if (formData.medicalHistory.trim()) updateData.medicalHistory = formData.medicalHistory.trim();
       if (formData.allergies.trim()) updateData.allergies = formData.allergies.trim();
       if (formData.currentMedications.trim()) updateData.currentMedications = formData.currentMedications.trim();
 
       const response = await client.models.Patient.update(updateData);
-      
+
       if (response.data) {
-        setPatient(response.data);
+        setPatient(response.data as PatientDetail); // Cast to new type
         setIsEditing(false);
         setErrors({});
       } else {
@@ -208,6 +211,7 @@ export default function PatientDetailPage() {
         lastName: patient.lastName || '',
         email: patient.email || '',
         phone: patient.phone || '',
+        profession: patient.profession || '',
         dateOfBirth: patient.dateOfBirth || '',
         address: patient.address || '',
         city: patient.city || '',
@@ -246,11 +250,11 @@ export default function PatientDetailPage() {
     const birth = new Date(birthDate);
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
-    
+
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
       age--;
     }
-    
+
     return age;
   };
 
@@ -322,14 +326,14 @@ export default function PatientDetailPage() {
               {unpaidInvoices.length} facture{unpaidInvoices.length > 1 ? 's' : ''} impayée{unpaidInvoices.length > 1 ? 's' : ''}
             </div>
           )}
-          
+
           <Link
             href="/patients"
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
           >
             Retour
           </Link>
-          
+
           {!isEditing ? (
             <button
               onClick={() => setIsEditing(true)}
@@ -370,7 +374,7 @@ export default function PatientDetailPage() {
           {/* Personal Information */}
           <div className="bg-white shadow rounded-lg p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Informations personnelles</h3>
-            
+
             {isEditing ? (
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div>
@@ -383,9 +387,8 @@ export default function PatientDetailPage() {
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleInputChange}
-                    className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
-                      errors.firstName ? 'border-red-300' : ''
-                    }`}
+                    className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${errors.firstName ? 'border-red-300' : ''
+                      }`}
                   />
                   {errors.firstName && (
                     <p className="mt-2 text-sm text-red-600">{errors.firstName}</p>
@@ -402,9 +405,8 @@ export default function PatientDetailPage() {
                     name="lastName"
                     value={formData.lastName}
                     onChange={handleInputChange}
-                    className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
-                      errors.lastName ? 'border-red-300' : ''
-                    }`}
+                    className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${errors.lastName ? 'border-red-300' : ''
+                      }`}
                   />
                   {errors.lastName && (
                     <p className="mt-2 text-sm text-red-600">{errors.lastName}</p>
@@ -421,9 +423,8 @@ export default function PatientDetailPage() {
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
-                      errors.email ? 'border-red-300' : ''
-                    }`}
+                    className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${errors.email ? 'border-red-300' : ''
+                      }`}
                   />
                   {errors.email && (
                     <p className="mt-2 text-sm text-red-600">{errors.email}</p>
@@ -440,9 +441,8 @@ export default function PatientDetailPage() {
                     name="phone"
                     value={formData.phone}
                     onChange={handleInputChange}
-                    className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
-                      errors.phone ? 'border-red-300' : ''
-                    }`}
+                    className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${errors.phone ? 'border-red-300' : ''
+                      }`}
                   />
                   {errors.phone && (
                     <p className="mt-2 text-sm text-red-600">{errors.phone}</p>
@@ -459,9 +459,8 @@ export default function PatientDetailPage() {
                     name="dateOfBirth"
                     value={formData.dateOfBirth}
                     onChange={handleInputChange}
-                    className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
-                      errors.dateOfBirth ? 'border-red-300' : ''
-                    }`}
+                    className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${errors.dateOfBirth ? 'border-red-300' : ''
+                      }`}
                   />
                   {errors.dateOfBirth && (
                     <p className="mt-2 text-sm text-red-600">{errors.dateOfBirth}</p>
@@ -484,6 +483,21 @@ export default function PatientDetailPage() {
                     <option value="F">Femme</option>
                     <option value="OTHER">Autre</option>
                   </select>
+                </div>
+
+                <div>
+                  <label htmlFor="profession" className="block text-sm font-medium text-gray-700">
+                    Profession
+                  </label>
+                  <input
+                    type="text"
+                    id="profession"
+                    name="profession"
+                    value={formData.profession}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    placeholder="Profession du patient"
+                  />
                 </div>
               </div>
             ) : (
@@ -512,6 +526,12 @@ export default function PatientDetailPage() {
                     {patient.phone || 'Non renseigné'}
                   </dd>
                 </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Profession</dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {patient.profession || 'Non renseignée'}
+                  </dd>
+                </div>
               </dl>
             )}
           </div>
@@ -519,7 +539,7 @@ export default function PatientDetailPage() {
           {/* Address Information */}
           <div className="bg-white shadow rounded-lg p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Adresse</h3>
-            
+
             {isEditing ? (
               <div className="space-y-4">
                 <div>
@@ -585,7 +605,7 @@ export default function PatientDetailPage() {
           {/* Medical Information */}
           <div className="bg-white shadow rounded-lg p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Informations médicales</h3>
-            
+
             {isEditing ? (
               <div className="space-y-6">
                 <div>
@@ -718,14 +738,13 @@ export default function PatientDetailPage() {
                       </span>
                     </div>
                     <div className="mt-2">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        invoice.status === 'OVERDUE' 
-                          ? 'bg-red-100 text-red-800' 
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${invoice.status === 'OVERDUE'
+                          ? 'bg-red-100 text-red-800'
                           : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {invoice.status === 'OVERDUE' ? 'En retard' : 
-                         invoice.status === 'SENT' ? 'Envoyée' : 
-                         'Brouillon'}
+                        }`}>
+                        {invoice.status === 'OVERDUE' ? 'En retard' :
+                          invoice.status === 'SENT' ? 'Envoyée' :
+                            'Brouillon'}
                       </span>
                     </div>
                   </div>
@@ -752,15 +771,6 @@ export default function PatientDetailPage() {
                     <p className="text-xs text-gray-500">
                       {formatDateTime(consultation.date)}
                     </p>
-                    {consultation.price && (
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1 ${
-                        consultation.isPaid 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {consultation.price}€ - {consultation.isPaid ? 'Payée' : 'Non payée'}
-                      </span>
-                    )}
                   </div>
                 ))}
                 {consultations.length > 3 && (
@@ -795,12 +805,6 @@ export default function PatientDetailPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Durée
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Prix
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Statut
-                  </th>
                   <th className="relative px-6 py-3">
                     <span className="sr-only">Actions</span>
                   </th>
@@ -820,24 +824,12 @@ export default function PatientDetailPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {consultation.duration}min
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {consultation.price ? `${consultation.price}€` : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {consultation.price && (
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          consultation.isPaid 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {consultation.isPaid ? 'Payée' : 'Non payée'}
-                        </span>
-                      )}
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button className="text-indigo-600 hover:text-indigo-900">
-                        Voir détails
-                      </button>
+                        <button className="text-indigo-600 hover:text-indigo-900">
+                          <Link href={`/consultations/${consultation.id}`} className="block hover:bg-gray-50 px-4 py-4 sm:px-6">
+                          Voir détails
+                          </Link>
+                        </button>
                     </td>
                   </tr>
                 ))}

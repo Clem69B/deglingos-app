@@ -1,88 +1,154 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../amplify/data/resource';
+import type { ConsultationListItem } from './types';
+import type { PatientListItem } from '../patients/types';
 import Link from 'next/link';
 
 const client = generateClient<Schema>();
 
+// Type pour le filtre de consultation
+type ConsultationFilter = {
+  patientId?: { eq: string };
+  date?: { 
+    between?: [string, string];
+    ge?: string;
+    le?: string;
+  };
+  or?: Array<{ reason?: { contains: string } }>;
+};
+
 export default function ConsultationsPage() {
-  const [consultations, setConsultations] = useState<Schema['Consultation']['type'][]>([]);
-  const [patients, setPatients] = useState<Schema['Patient']['type'][]>([]);
+  const [consultations, setConsultations] = useState<ConsultationListItem[]>([]); // Utilisation de la nouvelle interface
+  const [patients, setPatients] = useState<PatientListItem[]>([]); // Utilisation du type Patient local ou global
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPatient, setSelectedPatient] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [loading, setLoading] = useState(true);
-  const [filteredConsultations, setFilteredConsultations] = useState<Schema['Consultation']['type'][]>([]);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [nextToken, setNextToken] = useState<string | null>(null);
+  const [hasMoreResults, setHasMoreResults] = useState(true);
+
+  const ITEMS_PER_PAGE = 20;
 
   useEffect(() => {
-    fetchData();
+    fetchPatientsAndConsultations();
   }, []);
 
-  useEffect(() => {
-    // Filtrer les consultations en fonction des critères de recherche
-    let filtered = [...consultations];
-
-    // Filtrer par terme de recherche (motif, diagnostic, etc.)
-    if (searchTerm) {
-      filtered = filtered.filter(consultation =>
-        consultation.reason?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        consultation.diagnosis?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        consultation.symptoms?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        consultation.treatment?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Filtrer par patient
-    if (selectedPatient) {
-      filtered = filtered.filter(consultation => consultation.patientId === selectedPatient);
-    }
-
-    // Filtrer par date de début
-    if (dateFrom) {
-      const fromDate = new Date(dateFrom);
-      filtered = filtered.filter(consultation => 
-        new Date(consultation.date) >= fromDate
-      );
-    }
-
-    // Filtrer par date de fin
-    if (dateTo) {
-      const toDate = new Date(dateTo);
-      toDate.setHours(23, 59, 59, 999); // Inclure toute la journée
-      filtered = filtered.filter(consultation => 
-        new Date(consultation.date) <= toDate
-      );
-    }
-
-    // Trier par date décroissante (plus récent en premier)
-    filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-    setFilteredConsultations(filtered);
-  }, [consultations, searchTerm, selectedPatient, dateFrom, dateTo]);
-
-  const fetchData = async () => {
+  const fetchPatientsAndConsultations = async () => {
     try {
       setLoading(true);
-      
-      // Charger les consultations avec les données du patient
-      const consultationsResponse = await client.models.Consultation.list({
-        selectionSet: ['id', 'date', 'duration', 'reason', 'symptoms', 'diagnosis', 'treatment', 'price', 'isPaid', 'patientId', 'patient.firstName', 'patient.lastName', 'patient.email', 'createdAt', 'updatedAt']
-      });
-      
-      // Charger la liste des patients pour le filtre
+
+      // Fetch patients
       const patientsResponse = await client.models.Patient.list({
-        selectionSet: ['id', 'firstName', 'lastName']
+        selectionSet: ['id', 'firstName', 'lastName', 'createdAt']
       });
       
-      setConsultations(consultationsResponse.data || []);
-      setPatients(patientsResponse.data || []);
+      // Filtrer et transformer les données pour correspondre au type PatientListItem
+      const validPatients = (patientsResponse.data || [])
+        .filter(patient => patient.id)
+        .map(patient => ({
+          id: patient.id!,
+          firstName: patient.firstName || null,
+          lastName: patient.lastName || null,
+          email: null, // Non récupéré dans cette requête
+          phone: null, // Non récupéré dans cette requête
+          dateOfBirth: null, // Non récupéré dans cette requête
+          createdAt: patient.createdAt!
+        }));
+      
+      setPatients(validPatients);
     } catch (error) {
-      console.error('Erreur lors du chargement des données:', error);
+      console.error('Erreur lors du chargement des patients:', error);
+    }
+  };
+
+  const fetchConsultations = useCallback(async (reset = false) => {
+    try {
+      if (reset) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      // Build filter conditions
+      const filter: ConsultationFilter = {};
+      
+      if (selectedPatient) {
+        filter.patientId = { eq: selectedPatient };
+      }
+
+      if (dateFrom && dateTo) {
+        filter.date = { 
+          between: [dateFrom + 'T00:00:00.000Z', dateTo + 'T23:59:59.999Z']
+        };
+      } else if (dateFrom) {
+        filter.date = { ge: dateFrom + 'T00:00:00.000Z' };
+      } else if (dateTo) {
+        filter.date = { le: dateTo + 'T23:59:59.999Z' };
+      }
+
+      // Add text search filter
+      if (searchTerm) {
+        filter.or = [
+          { reason: { contains: searchTerm } },
+          // Si vous souhaitez toujours rechercher dans les notes ou d'autres champs non affichés directement :
+          // { notes: { contains: searchTerm } }, 
+          // { anamnesisSkullCervical: { contains: searchTerm } }, 
+          // etc.
+          // Pour une simplification maximale basée sur l'affichage :
+          // Uniquement la raison si les autres champs ne sont plus dans ConsultationListItem
+        ];
+      }
+
+      const consultationsResponse = await client.models.Consultation.list({
+        filter: Object.keys(filter).length > 0 ? filter : undefined,
+        limit: ITEMS_PER_PAGE,
+        nextToken: reset ? undefined : nextToken,
+        selectionSet: [
+          'id', 
+          'date', 
+          'reason', 
+          'duration',
+          'patientId',
+          'patient.firstName', 
+          'patient.lastName'
+        ]
+      });
+
+      const newConsultations = (consultationsResponse.data || []) as ConsultationListItem[]; // Cast vers la nouvelle interface
+      
+      if (reset) {
+        setConsultations(newConsultations);
+      } else {
+        setConsultations(prev => [...prev, ...newConsultations]);
+      }
+
+      setNextToken(consultationsResponse.nextToken || null);
+      setHasMoreResults(!!consultationsResponse.nextToken);
+
+    } catch (error) {
+      console.error('Erreur lors du chargement des consultations:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  }, [searchTerm, selectedPatient, dateFrom, dateTo, nextToken]);
+
+  useEffect(() => {
+    // Reset pagination when filters change
+    setConsultations([]);
+    setNextToken(null);
+    setHasMoreResults(true);
+    fetchConsultations(true);
+  }, [searchTerm, selectedPatient, dateFrom, dateTo, fetchConsultations]);
+
+  const loadMoreConsultations = () => {
+    if (!loadingMore && hasMoreResults) {
+      fetchConsultations(false);
     }
   };
 
@@ -101,13 +167,6 @@ export default function ConsultationsPage() {
       hour: '2-digit',
       minute: '2-digit'
     });
-  };
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(price);
   };
 
   return (
@@ -230,7 +289,7 @@ export default function ConsultationsPage() {
           <div className="px-4 py-12 text-center">
             <div className="text-sm text-gray-500">Chargement des consultations...</div>
           </div>
-        ) : filteredConsultations.length === 0 ? (
+        ) : consultations.length === 0 ? (
           <div className="px-4 py-12 text-center">
             <div className="text-sm text-gray-500">
               {searchTerm || selectedPatient || dateFrom || dateTo ? 
@@ -240,66 +299,72 @@ export default function ConsultationsPage() {
             </div>
           </div>
         ) : (
-          <ul className="divide-y divide-gray-200">
-            {filteredConsultations.map((consultation) => (
-              <li key={consultation.id}>
-                <Link
-                  href={`/consultations/${consultation.id}`}
-                  className="block hover:bg-gray-50 px-4 py-4 sm:px-6"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm font-medium text-indigo-600 truncate">
-                          {consultation.patient?.firstName} {consultation.patient?.lastName}
-                        </div>
-                        <div className="ml-2 flex-shrink-0 flex">
-                          {consultation.isPaid ? (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              Payé
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                              Non payé
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="mt-2 sm:flex sm:justify-between">
-                        <div className="sm:flex">
-                          <div className="mr-6 flex items-center text-sm text-gray-500">
-                            <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            {formatDate(consultation.date)}
-                          </div>
-                          <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                            <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            {consultation.duration} min
+          <>
+            <ul className="divide-y divide-gray-200">
+              {consultations.map((consultation) => (
+                <li key={consultation.id}>
+                  <Link
+                    href={`/consultations/${consultation.id}`}
+                    className="block hover:bg-gray-50 px-4 py-4 sm:px-6"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm font-medium text-indigo-600 truncate">
+                            {consultation.patient?.firstName} {consultation.patient?.lastName}
                           </div>
                         </div>
-                        <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                          {consultation.price && formatPrice(consultation.price)}
-                        </div>
-                      </div>
-                      <div className="mt-2">
-                        <div className="text-sm text-gray-900">
-                          <span className="font-medium">Motif:</span> {consultation.reason}
-                        </div>
-                        {consultation.diagnosis && (
-                          <div className="text-sm text-gray-500 mt-1">
-                            <span className="font-medium">Diagnostic:</span> {consultation.diagnosis}
+                        <div className="mt-2 sm:flex sm:justify-between">
+                          <div className="sm:flex">
+                            <div className="mr-6 flex items-center text-sm text-gray-500">
+                              <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              {formatDate(consultation.date)}
+                            </div>
+                            <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
+                              <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              {consultation.duration || 60} min
+                            </div>
                           </div>
-                        )}
+                        </div>
+                        <div className="mt-2">
+                          <div className="text-sm text-gray-900">
+                            <span className="font-medium">Motif:</span> {consultation.reason}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            
+            {/* Bouton "Charger plus" */}
+            {hasMoreResults && (
+              <div className="px-4 py-4 text-center border-t border-gray-200">
+                <button
+                  onClick={loadMoreConsultations}
+                  disabled={loadingMore}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                >
+                  {loadingMore ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Chargement...
+                    </>
+                  ) : (
+                    `Charger plus de consultations`
+                  )}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -308,15 +373,8 @@ export default function ConsultationsPage() {
         <div className="bg-white shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
             <div className="text-sm text-gray-500">
-              {searchTerm || selectedPatient || dateFrom || dateTo ? (
-                <>
-                  {filteredConsultations.length} consultation(s) trouvée(s) sur {consultations.length} total
-                </>
-              ) : (
-                <>
-                  {consultations.length} consultation(s) enregistrée(s)
-                </>
-              )}
+              {consultations.length} consultation(s) affichée(s)
+              {hasMoreResults && ' (plus de résultats disponibles)'}
             </div>
           </div>
         </div>

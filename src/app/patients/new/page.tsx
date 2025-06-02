@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../../amplify/data/resource';
+import type { CreatePatientInput } from '../../types';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -18,6 +19,7 @@ interface PatientFormData {
   city: string;
   postalCode: string;
   gender: 'M' | 'F' | 'OTHER' | '';
+  profession: string;
   emergencyContact: string;
   medicalHistory: string;
   allergies: string;
@@ -38,6 +40,7 @@ export default function NewPatientPage() {
     city: '',
     postalCode: '',
     gender: '',
+    profession: '',
     emergencyContact: '',
     medicalHistory: '',
     allergies: '',
@@ -85,7 +88,7 @@ export default function NewPatientPage() {
 
     setLoading(true);
     try {
-      const patientData: Partial<Schema['Patient']['type']> = {
+      const patientData: CreatePatientInput = {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
       };
@@ -98,6 +101,7 @@ export default function NewPatientPage() {
       if (formData.city.trim()) patientData.city = formData.city.trim();
       if (formData.postalCode.trim()) patientData.postalCode = formData.postalCode.trim();
       if (formData.gender) patientData.gender = formData.gender;
+      if (formData.profession.trim()) patientData.profession = formData.profession.trim();
       if (formData.emergencyContact.trim()) patientData.emergencyContact = formData.emergencyContact.trim();
       if (formData.medicalHistory.trim()) patientData.medicalHistory = formData.medicalHistory.trim();
       if (formData.allergies.trim()) patientData.allergies = formData.allergies.trim();
@@ -270,6 +274,21 @@ export default function NewPatientPage() {
                   <option value="F">Femme</option>
                   <option value="OTHER">Autre</option>
                 </select>
+              </div>
+
+              <div>
+                <label htmlFor="profession" className="block text-sm font-medium text-gray-700">
+                  Profession
+                </label>
+                <input
+                  type="text"
+                  id="profession"
+                  name="profession"
+                  value={formData.profession}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  placeholder="Profession du patient"
+                />
               </div>
             </div>
           </div>

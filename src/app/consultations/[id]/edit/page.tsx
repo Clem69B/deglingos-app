@@ -2,18 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '../../../../amplify/data/resource';
-import { useRouter } from 'next/navigation';
+import type { Schema } from '../../../../../amplify/data/resource';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import type { CreateConsultationInput } from '../../types';
-import type { PatientListItem } from '../../patients/types';
+import type { Consultation, UpdateConsultationInput } from '../../../types';
+import type { PatientListItem } from '../../../patients/types';
 
 const client = generateClient<Schema>();
 
-export default function NewConsultationPage() {
+export default function EditConsultationPage() {
   const router = useRouter();
+  const params = useParams();
   const [patients, setPatients] = useState<PatientListItem[]>([]);
+  const [consultation, setConsultation] = useState<Consultation | null>(null);
   const [loading, setLoading] = useState(false);
+  const [fetchLoading, setFetchLoading] = useState(true);
   const [formData, setFormData] = useState({
     patientId: '',
     date: '',
@@ -35,16 +38,10 @@ export default function NewConsultationPage() {
 
   useEffect(() => {
     fetchPatients();
-    // Définir la date et l'heure par défaut à maintenant
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    const currentTime = now.toTimeString().slice(0, 5);
-    setFormData(prev => ({
-      ...prev,
-      date: today,
-      time: currentTime
-    }));
-  }, []);
+    if (params.id) {
+      fetchConsultation(params.id as string);
+    }
+  }, [params.id]);
 
   const fetchPatients = async () => {
     try {
@@ -68,6 +65,64 @@ export default function NewConsultationPage() {
       setPatients(validPatients);
     } catch (error) {
       console.error('Erreur lors du chargement des patients:', error);
+    }
+  };
+
+  const fetchConsultation = async (id: string) => {
+    try {
+      setFetchLoading(true);
+      const response = await client.models.Consultation.get(
+        { id },
+        {
+          selectionSet: [
+            'id', 'date', 'duration', 'reason', 'treatment', 'recommendations', 
+            'notes', 'nextAppointment', 'patientId',
+            'anamnesisSkullCervical', 'anamnesisDigestive', 'anamnesisCardioThoracic',
+            'anamnesisGynecological', 'amnamnesisSleep', 'amnamnesisPsychological'
+          ]
+        }
+      );
+      
+      if (response.data) {
+        const consult = response.data as Consultation;
+        setConsultation(consult);
+        
+        // Convertir la date ISO en date et heure séparées
+        const consultDate = new Date(consult.date);
+        const dateStr = consultDate.toISOString().split('T')[0];
+        const timeStr = consultDate.toTimeString().slice(0, 5);
+        
+        let nextAppointmentDate = '';
+        let nextAppointmentTime = '';
+        if (consult.nextAppointment) {
+          const nextDate = new Date(consult.nextAppointment);
+          nextAppointmentDate = nextDate.toISOString().split('T')[0];
+          nextAppointmentTime = nextDate.toTimeString().slice(0, 5);
+        }
+        
+        setFormData({
+          patientId: consult.patientId,
+          date: dateStr,
+          time: timeStr,
+          duration: consult.duration || 60,
+          reason: consult.reason,
+          treatment: consult.treatment || '',
+          recommendations: consult.recommendations || '',
+          notes: consult.notes || '',
+          anamnesisSkullCervical: consult.anamnesisSkullCervical || '',
+          anamnesisDigestive: consult.anamnesisDigestive || '',
+          anamnesisCardioThoracic: consult.anamnesisCardioThoracic || '',
+          anamnesisGynecological: consult.anamnesisGynecological || '',
+          amnamnesisSleep: consult.amnamnesisSleep || '',
+          amnamnesisPsychological: consult.amnamnesisPsychological || '',
+          nextAppointmentDate,
+          nextAppointmentTime
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement de la consultation:', error);
+    } finally {
+      setFetchLoading(false);
     }
   };
 
@@ -97,8 +152,8 @@ export default function NewConsultationPage() {
         nextAppointmentDateTime = new Date(`${formData.nextAppointmentDate}T${formData.nextAppointmentTime}`).toISOString();
       }
 
-      const consultationData: CreateConsultationInput = {
-        patientId: formData.patientId,
+      const updateData: UpdateConsultationInput = {
+        id: params.id as string,
         date: consultationDateTime.toISOString(),
         duration: parseInt(formData.duration.toString()),
         reason: formData.reason,
@@ -114,16 +169,38 @@ export default function NewConsultationPage() {
         nextAppointment: nextAppointmentDateTime
       };
 
-      await client.models.Consultation.create(consultationData);
+      await client.models.Consultation.update(updateData);
       
-      router.push('/consultations');
+      router.push(`/consultations/${params.id}`);
     } catch (error) {
-      console.error('Erreur lors de la création de la consultation:', error);
-      alert('Erreur lors de la création de la consultation');
+      console.error('Erreur lors de la mise à jour de la consultation:', error);
+      alert('Erreur lors de la mise à jour de la consultation');
     } finally {
       setLoading(false);
     }
   };
+
+  if (fetchLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-sm text-gray-500">Chargement de la consultation...</div>
+      </div>
+    );
+  }
+
+  if (!consultation) {
+    return (
+      <div className="text-center">
+        <div className="text-sm text-gray-500">Consultation non trouvée</div>
+        <Link
+          href="/consultations"
+          className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-indigo-600 bg-indigo-100 hover:bg-indigo-200"
+        >
+          Retour aux consultations
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -131,15 +208,15 @@ export default function NewConsultationPage() {
       <div className="md:flex md:items-center md:justify-between">
         <div className="flex-1 min-w-0">
           <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-            Nouvelle consultation
+            Modifier la consultation
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Enregistrez une nouvelle consultation patient
+            Modifiez les informations de la consultation
           </p>
         </div>
         <div className="mt-4 flex md:mt-0 md:ml-4">
           <Link
-            href="/consultations"
+            href={`/consultations/${params.id}`}
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
             Retour
@@ -267,7 +344,7 @@ export default function NewConsultationPage() {
             </div>
             <div className="mt-5 md:mt-0 md:col-span-2">
               <div className="grid grid-cols-1 gap-6">
-                {/* Anamnèse - Crâne, Cervicale */}
+                {/* ...existing anamnese fields similar to new consultation page... */}
                 <div>
                   <label htmlFor="anamnesisSkullCervical" className="block text-sm font-medium text-gray-700">
                     Crâne & Cervicale
@@ -283,7 +360,6 @@ export default function NewConsultationPage() {
                   />
                 </div>
 
-                {/* Anamnèse - Système digestif */}
                 <div>
                   <label htmlFor="anamnesisDigestive" className="block text-sm font-medium text-gray-700">
                     Système digestif
@@ -299,7 +375,6 @@ export default function NewConsultationPage() {
                   />
                 </div>
 
-                {/* Anamnèse - Cardique / pulmonaire / thoracique */}
                 <div>
                   <label htmlFor="anamnesisCardioThoracic" className="block text-sm font-medium text-gray-700">
                     Cardio-thoracique
@@ -315,7 +390,6 @@ export default function NewConsultationPage() {
                   />
                 </div>
 
-                {/* Anamnèse - Gynécologique */}
                 <div>
                   <label htmlFor="anamnesisGynecological" className="block text-sm font-medium text-gray-700">
                     Gynécologique
@@ -331,7 +405,6 @@ export default function NewConsultationPage() {
                   />
                 </div>
 
-                {/* Anamnèse - Sommeil */}
                 <div>
                   <label htmlFor="amnamnesisSleep" className="block text-sm font-medium text-gray-700">
                     Sommeil
@@ -347,7 +420,6 @@ export default function NewConsultationPage() {
                   />
                 </div>
 
-                {/* Anamnèse - Psychologique / Emotionnel */}
                 <div>
                   <label htmlFor="amnamnesisPsychological" className="block text-sm font-medium text-gray-700">
                     Psychologique & Émotionnel
@@ -380,7 +452,7 @@ export default function NewConsultationPage() {
             </div>
             <div className="mt-5 md:mt-0 md:col-span-2">
               <div className="grid grid-cols-1 gap-6">
-                {/* Traitement */}
+                {/* ...existing treatment fields similar to new consultation page... */}
                 <div>
                   <label htmlFor="treatment" className="block text-sm font-medium text-gray-700">
                     Traitement
@@ -396,7 +468,6 @@ export default function NewConsultationPage() {
                   />
                 </div>
 
-                {/* Recommandations */}
                 <div>
                   <label htmlFor="recommendations" className="block text-sm font-medium text-gray-700">
                     Recommandations
@@ -412,7 +483,6 @@ export default function NewConsultationPage() {
                   />
                 </div>
 
-                {/* Prochain RDV */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="nextAppointmentDate" className="block text-sm font-medium text-gray-700">
@@ -443,7 +513,6 @@ export default function NewConsultationPage() {
                   </div>
                 </div>
 
-                {/* Notes */}
                 <div>
                   <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
                     Notes privées
@@ -466,7 +535,7 @@ export default function NewConsultationPage() {
         {/* Boutons d'action */}
         <div className="flex justify-end space-x-3">
           <Link
-            href="/consultations"
+            href={`/consultations/${params.id}`}
             className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
             Annuler
@@ -476,7 +545,7 @@ export default function NewConsultationPage() {
             disabled={loading}
             className="bg-indigo-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
           >
-            {loading ? 'Enregistrement...' : 'Enregistrer la consultation'}
+            {loading ? 'Mise à jour...' : 'Mettre à jour la consultation'}
           </button>
         </div>
       </form>

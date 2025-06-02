@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../../amplify/data/resource';
+import type { ConsultationWithPatient } from '../../types';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -10,9 +11,8 @@ const client = generateClient<Schema>();
 
 export default function ConsultationDetailPage() {
   const params = useParams();
-  const [consultation, setConsultation] = useState<Schema['Consultation']['type'] | null>(null);
+  const [consultation, setConsultation] = useState<ConsultationWithPatient | null>(null);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     if (params.id) {
@@ -27,41 +27,22 @@ export default function ConsultationDetailPage() {
         { id },
         {
           selectionSet: [
-            'id', 'date', 'duration', 'reason', 'symptoms', 'examination', 
-            'diagnosis', 'treatment', 'recommendations', 'price', 'isPaid', 
-            'notes', 'createdAt', 'updatedAt',
+            'id', 'date', 'duration', 'reason', 'treatment', 'recommendations', 
+            'notes', 'createdAt', 'updatedAt', 'nextAppointment',
+            'anamnesisSkullCervical', 'anamnesisDigestive', 'anamnesisCardioThoracic',
+            'anamnesisGynecological', 'amnamnesisSleep', 'amnamnesisPsychological',
             'patient.id', 'patient.firstName', 'patient.lastName', 
             'patient.email', 'patient.phone', 'patient.dateOfBirth'
           ]
         }
       );
-      setConsultation(response.data);
+      if (response.data) {
+        setConsultation(response.data);
+      }
     } catch (error) {
       console.error('Erreur lors du chargement de la consultation:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const togglePaymentStatus = async () => {
-    if (!consultation) return;
-
-    setUpdating(true);
-    try {
-      await client.models.Consultation.update({
-        id: consultation.id,
-        isPaid: !consultation.isPaid
-      });
-      
-      setConsultation(prev => ({
-        ...prev,
-        isPaid: !prev.isPaid
-      }));
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du statut de paiement:', error);
-      alert('Erreur lors de la mise à jour du statut de paiement');
-    } finally {
-      setUpdating(false);
     }
   };
 
@@ -73,13 +54,6 @@ export default function ConsultationDetailPage() {
       hour: '2-digit',
       minute: '2-digit'
     });
-  };
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(price);
   };
 
   const calculateAge = (birthDate: string) => {
@@ -128,17 +102,6 @@ export default function ConsultationDetailPage() {
           </p>
         </div>
         <div className="mt-4 flex space-x-3 md:mt-0 md:ml-4">
-          <button
-            onClick={togglePaymentStatus}
-            disabled={updating}
-            className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-              consultation.isPaid
-                ? 'text-red-700 bg-red-100 hover:bg-red-200 focus:ring-red-500'
-                : 'text-green-700 bg-green-100 hover:bg-green-200 focus:ring-green-500'
-            } disabled:opacity-50`}
-          >
-            {updating ? 'Mise à jour...' : consultation.isPaid ? 'Marquer comme non payé' : 'Marquer comme payé'}
-          </button>
           <Link
             href={`/consultations/${consultation.id}/edit`}
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -172,78 +135,101 @@ export default function ConsultationDetailPage() {
                   <dt className="text-sm font-medium text-gray-500">Durée</dt>
                   <dd className="mt-1 text-sm text-gray-900">{consultation.duration} minutes</dd>
                 </div>
-                <div>
+                <div className="sm:col-span-2">
                   <dt className="text-sm font-medium text-gray-500">Motif</dt>
                   <dd className="mt-1 text-sm text-gray-900">{consultation.reason}</dd>
                 </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Statut de paiement</dt>
-                  <dd className="mt-1">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      consultation.isPaid 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {consultation.isPaid ? 'Payé' : 'Non payé'}
-                    </span>
-                  </dd>
-                </div>
-                {consultation.price && (
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Prix</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{formatPrice(consultation.price)}</dd>
+                {consultation.nextAppointment && (
+                  <div className="sm:col-span-2">
+                    <dt className="text-sm font-medium text-gray-500">Prochain rendez-vous</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{formatDate(consultation.nextAppointment)}</dd>
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Détails médicaux */}
-          <div className="bg-white shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                Détails médicaux
-              </h3>
-              <div className="space-y-4">
-                {consultation.symptoms && (
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Symptômes</dt>
-                    <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{consultation.symptoms}</dd>
-                  </div>
-                )}
-                {consultation.examination && (
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Examen clinique</dt>
-                    <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{consultation.examination}</dd>
-                  </div>
-                )}
-                {consultation.diagnosis && (
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Diagnostic</dt>
-                    <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{consultation.diagnosis}</dd>
-                  </div>
-                )}
-                {consultation.treatment && (
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Traitement</dt>
-                    <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{consultation.treatment}</dd>
-                  </div>
-                )}
-                {consultation.recommendations && (
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Recommandations</dt>
-                    <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{consultation.recommendations}</dd>
-                  </div>
-                )}
-                {consultation.notes && (
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Notes privées</dt>
-                    <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{consultation.notes}</dd>
-                  </div>
-                )}
+          {/* Anamnèse */}
+          {(consultation.anamnesisSkullCervical || consultation.anamnesisDigestive || 
+            consultation.anamnesisCardioThoracic || consultation.anamnesisGynecological || 
+            consultation.amnamnesisSleep || consultation.amnamnesisPsychological) && (
+            <div className="bg-white shadow rounded-lg">
+              <div className="px-4 py-5 sm:p-6">
+                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+                  Anamnèse
+                </h3>
+                <div className="space-y-4">
+                  {consultation.anamnesisSkullCervical && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Crâne & Cervicale</dt>
+                      <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{consultation.anamnesisSkullCervical}</dd>
+                    </div>
+                  )}
+                  {consultation.anamnesisDigestive && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Système digestif</dt>
+                      <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{consultation.anamnesisDigestive}</dd>
+                    </div>
+                  )}
+                  {consultation.anamnesisCardioThoracic && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Cardio-thoracique</dt>
+                      <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{consultation.anamnesisCardioThoracic}</dd>
+                    </div>
+                  )}
+                  {consultation.anamnesisGynecological && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Gynécologique</dt>
+                      <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{consultation.anamnesisGynecological}</dd>
+                    </div>
+                  )}
+                  {consultation.amnamnesisSleep && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Sommeil</dt>
+                      <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{consultation.amnamnesisSleep}</dd>
+                    </div>
+                  )}
+                  {consultation.amnamnesisPsychological && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Psychologique & Émotionnel</dt>
+                      <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{consultation.amnamnesisPsychological}</dd>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* Traitement et suivi */}
+          {(consultation.treatment || consultation.recommendations || consultation.notes) && (
+            <div className="bg-white shadow rounded-lg">
+              <div className="px-4 py-5 sm:p-6">
+                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+                  Traitement et suivi
+                </h3>
+                <div className="space-y-4">
+                  {consultation.treatment && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Traitement</dt>
+                      <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{consultation.treatment}</dd>
+                    </div>
+                  )}
+                  {consultation.recommendations && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Recommandations</dt>
+                      <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{consultation.recommendations}</dd>
+                    </div>
+                  )}
+                  {consultation.notes && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Notes privées</dt>
+                      <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{consultation.notes}</dd>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sidebar avec informations du patient */}
@@ -308,25 +294,25 @@ export default function ConsultationDetailPage() {
                 <div>
                   <span className="font-medium text-gray-500">Créé le:</span>
                   <span className="ml-2 text-gray-900">
-                    {new Date(consultation.createdAt).toLocaleDateString('fr-FR', {
+                    {consultation.createdAt ? new Date(consultation.createdAt).toLocaleDateString('fr-FR', {
                       day: '2-digit',
                       month: '2-digit',
                       year: 'numeric',
                       hour: '2-digit',
                       minute: '2-digit'
-                    })}
+                    }) : 'Non disponible'}
                   </span>
                 </div>
                 <div>
                   <span className="font-medium text-gray-500">Modifié le:</span>
                   <span className="ml-2 text-gray-900">
-                    {new Date(consultation.updatedAt).toLocaleDateString('fr-FR', {
+                    {consultation.updatedAt ? new Date(consultation.updatedAt).toLocaleDateString('fr-FR', {
                       day: '2-digit',
                       month: '2-digit',
                       year: 'numeric',
                       hour: '2-digit',
                       minute: '2-digit'
-                    })}
+                    }) : 'Non disponible'}
                   </span>
                 </div>
               </div>

@@ -14,6 +14,7 @@ const schema = a.schema({
       city: a.string(),
       postalCode: a.string(),
       gender: a.enum(['M', 'F', 'OTHER']),
+      profession: a.string(),
       emergencyContact: a.string(),
       medicalHistory: a.string(),
       allergies: a.string(),
@@ -38,21 +39,23 @@ const schema = a.schema({
       date: a.datetime().required(),
       duration: a.integer().default(60), // minutes
       reason: a.string().required(),
-      symptoms: a.string(),
-      examination: a.string(),
-      diagnosis: a.string(),
+      // Anamnèse structurée par systèmes
+      anamnesisSkullCervical: a.string(), // Crâne, Cervicale
+      anamnesisDigestive: a.string(), // Système digestif
+      anamnesisCardioThoracic: a.string(), // Cardique / pulmonaire / thoracique
+      anamnesisGynecological: a.string(), // Gynécologique
+      amnamnesisSleep: a.string(), // Sommeil
+      amnamnesisPsychological: a.string(), // Psychologique / Emotionnel
       treatment: a.string(),
       recommendations: a.string(),
       nextAppointment: a.datetime(),
-      price: a.float(),
-      isPaid: a.boolean().default(false),
+      invoice: a.hasOne('Invoice', 'consultationId'),
       notes: a.string(),
       createdAt: a.datetime(),
       updatedAt: a.datetime(),
     })
     .authorization((allow) => [
-      allow.group('osteopaths'),
-      allow.group('assistants').to(['read', 'create', 'update']),
+      allow.group('osteopaths')
     ]),
 
   // Invoice Model
@@ -62,13 +65,14 @@ const schema = a.schema({
       invoiceNumber: a.string().required(),
       patientId: a.id().required(),
       patient: a.belongsTo('Patient', 'patientId'),
-      consultationIds: a.string().array(), // JSON array of consultation IDs
+      consultationId: a.id(),
+      consultation: a.belongsTo('Consultation', 'consultationId'),
       date: a.date().required(),
       dueDate: a.date(),
-      items: a.string().required(), // JSON string of invoice items
-      subtotal: a.float().required(),
+      price: a.float(),
       tax: a.float().default(0),
       total: a.float().required(),
+      isPaid: a.boolean().default(false),
       status: a.enum(['DRAFT', 'SENT', 'PAID', 'OVERDUE']),
       paidAt: a.datetime(),
       notes: a.string(),

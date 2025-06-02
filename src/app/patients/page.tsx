@@ -4,14 +4,15 @@ import { useEffect, useState } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../amplify/data/resource';
 import Link from 'next/link';
+import { PatientListItem } from './types';
 
 const client = generateClient<Schema>();
 
 export default function PatientsPage() {
-  const [patients, setPatients] = useState<Schema['Patient']['type'][]>([]);
+  const [patients, setPatients] = useState<PatientListItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [filteredPatients, setFilteredPatients] = useState<Schema['Patient']['type'][]>([]);
+  const [filteredPatients, setFilteredPatients] = useState<PatientListItem[]>([]);
 
   useEffect(() => {
     fetchPatients();
@@ -31,8 +32,24 @@ export default function PatientsPage() {
   const fetchPatients = async () => {
     try {
       setLoading(true);
-      const response = await client.models.Patient.list();
-      setPatients(response.data || []);
+      const response = await client.models.Patient.list({
+        selectionSet: ["id", "firstName", "lastName", "email", "phone", "dateOfBirth", "createdAt"]
+      });
+      
+      // Filtrer et transformer les données pour correspondre au type PatientListItem
+      const fetchedPatients: PatientListItem[] = (response.data || [])
+        .filter(p => p.id) // Filtrer les patients avec un id valide
+        .map(p => ({
+          id: p.id!,
+          firstName: p.firstName || null,
+          lastName: p.lastName || null,
+          email: p.email || null,
+          phone: p.phone || null,
+          dateOfBirth: p.dateOfBirth || null,
+          createdAt: p.createdAt!,
+        }));
+      
+      setPatients(fetchedPatients);
     } catch (error) {
       console.error('Erreur lors du chargement des patients:', error);
     } finally {
@@ -142,9 +159,9 @@ export default function PatientsPage() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end text-sm text-gray-500">
-                      {patient.birthDate && (
+                      {patient.dateOfBirth && (
                         <div>
-                          Né(e) le {new Date(patient.birthDate).toLocaleDateString('fr-FR')}
+                          Né(e) le {new Date(patient.dateOfBirth).toLocaleDateString('fr-FR')}
                         </div>
                       )}
                       <div className="mt-1">
