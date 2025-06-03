@@ -10,30 +10,47 @@ export function Providers({ children }: { children: React.ReactNode }) {
       signUpAttributes={['given_name', 'family_name']}
       loginMechanisms={['email']}
       hideSignUp
-    >
-      {({ signOut, user }) => (
-        <div className="min-h-screen bg-gray-50">
-          <nav className="bg-white shadow-sm border-b">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-between h-16 items-center">
-                <h1 className="text-xl font-semibold">Cabinet Ostéopathie</h1>
-                <div className="flex items-center space-x-4">
-                  <span className="text-gray-700">
-                    Bonjour, {user?.signInDetails?.loginId}
-                  </span>
-                  <button
-                    onClick={signOut}
-                    className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
-                  >
-                    Déconnexion
-                  </button>
-                </div>
-              </div>
+      components={{
+        Header() {
+          return (
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-indigo-600 mb-2">
+                Degling&apos;Os
+              </h1>
+              <p className="text-gray-600">
+                Cabinet d&apos;Ostéopathie - Connexion
+              </p>
             </div>
-          </nav>
-          <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-            {children}
-          </main>
+          );
+        },
+        Footer() {
+          return (
+            <div className="text-center mt-6">
+              <p className="text-sm text-gray-500">
+                © 2025 Degling&apos;Os - Tous droits réservés
+              </p>
+            </div>
+          );
+        }
+      }}
+      formFields={{
+        signIn: {
+          username: {
+            placeholder: 'Email',
+            label: 'Adresse email',
+            required: true,
+          },
+          password: {
+            placeholder: 'Mot de passe',
+            label: 'Mot de passe',
+            required: true,
+          },
+        },
+      }}
+    >
+      {() => (
+        <div className="min-h-screen bg-gray-50">
+          {children}
         </div>
       )}
     </Authenticator>

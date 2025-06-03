@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { useAuthenticator } from '@aws-amplify/ui-react';
 
 const navigation = [
   { name: 'Tableau de bord', href: '/', icon: HomeIcon },
@@ -78,6 +79,22 @@ function XMarkIcon(props: React.ComponentProps<'svg'>) {
   );
 }
 
+function UserIcon(props: React.ComponentProps<'svg'>) {
+  return (
+    <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+    </svg>
+  );
+}
+
+function ArrowRightOnRectangleIcon(props: React.ComponentProps<'svg'>) {
+  return (
+    <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
+    </svg>
+  );
+}
+
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(' ');
 }
@@ -85,54 +102,81 @@ function classNames(...classes: string[]) {
 export default function Navigation() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, signOut } = useAuthenticator((context) => [context.user]);
 
   return (
     <nav className="bg-white shadow">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex">
-            <div className="flex-shrink-0 flex items-center">
+      {/* Top row: Title, User info and logout */}
+      <div className="bg-indigo-50 border-b border-indigo-100">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-12">
+            <div className="flex-shrink-0">
               <Link href="/" className="text-xl font-bold text-indigo-600">
-                Cabinet Médical
+                Degling&apos;Os
               </Link>
             </div>
-            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-              {navigation.map((item) => {
-                const isActive = pathname === item.href || 
-                  (item.href !== '/' && pathname.startsWith(item.href));
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={classNames(
-                      isActive
-                        ? 'border-indigo-500 text-gray-900'
-                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700',
-                      'inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium'
-                    )}
+            
+            {/* User info and actions - Desktop */}
+            <div className="hidden sm:flex sm:items-center sm:space-x-4">
+              {user && (
+                <>
+                  <div className="flex items-center text-sm text-gray-700">
+                    <UserIcon className="w-4 h-4 mr-2" />
+                    <span>{user?.signInDetails?.loginId || "Utilisateur"}</span>
+                  </div>
+                  <button
+                    onClick={signOut}
+                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                   >
-                    <item.icon className="w-4 h-4 mr-2" />
-                    {item.name}
-                  </Link>
-                );
-              })}
+                    <ArrowRightOnRectangleIcon className="w-4 h-4 mr-1" />
+                    Déconnexion
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Mobile menu button */}
+            <div className="sm:hidden flex items-center">
+              <button
+                type="button"
+                className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                <span className="sr-only">Ouvrir le menu principal</span>
+                {mobileMenuOpen ? (
+                  <XMarkIcon className="block h-5 w-5" />
+                ) : (
+                  <Bars3Icon className="block h-5 w-5" />
+                )}
+              </button>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Mobile menu button */}
-          <div className="sm:hidden flex items-center">
-            <button
-              type="button"
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              <span className="sr-only">Ouvrir le menu principal</span>
-              {mobileMenuOpen ? (
-                <XMarkIcon className="block h-6 w-6" />
-              ) : (
-                <Bars3Icon className="block h-6 w-6" />
-              )}
-            </button>
+      {/* Bottom row: Navigation menu - Desktop */}
+      <div className="hidden sm:block">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex space-x-8 h-12">
+            {navigation.map((item) => {
+              const isActive = pathname === item.href || 
+                (item.href !== '/' && pathname.startsWith(item.href));
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={classNames(
+                    isActive
+                      ? 'border-indigo-500 text-gray-900'
+                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700',
+                    'inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium'
+                  )}
+                >
+                  <item.icon className="w-4 h-4 mr-2" />
+                  {item.name}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -164,6 +208,33 @@ export default function Navigation() {
               );
             })}
           </div>
+          
+          {/* Mobile user section */}
+          {user && (
+            <div className="pt-4 pb-3 border-t border-gray-200">
+              <div className="flex items-center px-4">
+                <div className="flex items-center">
+                  <UserIcon className="w-8 h-8 text-gray-400" />
+                  <div className="ml-3">
+                    <div className="text-base font-medium text-gray-800">
+                      {user?.signInDetails?.loginId || "Utilisateur"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 px-2">
+                <button
+                  onClick={signOut}
+                  className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+                >
+                  <div className="flex items-center">
+                    <ArrowRightOnRectangleIcon className="w-5 h-5 mr-3" />
+                    Déconnexion
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </nav>
