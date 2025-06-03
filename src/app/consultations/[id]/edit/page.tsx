@@ -29,8 +29,8 @@ export default function EditConsultationPage() {
     anamnesisDigestive: '',
     anamnesisCardioThoracic: '',
     anamnesisGynecological: '',
-    amnamnesisSleep: '',
-    amnamnesisPsychological: '',
+    anamnesisSleep: '',
+    anamnesisPsychological: '',
     nextAppointmentDate: '',
     nextAppointmentTime: ''
   });
@@ -77,7 +77,7 @@ export default function EditConsultationPage() {
             'id', 'date', 'duration', 'reason', 'treatment', 'recommendations', 
             'notes', 'nextAppointment', 'patientId',
             'anamnesisSkullCervical', 'anamnesisDigestive', 'anamnesisCardioThoracic',
-            'anamnesisGynecological', 'amnamnesisSleep', 'amnamnesisPsychological'
+            'anamnesisGynecological', 'anamnesisSleep', 'anamnesisPsychological'
           ]
         }
       );
@@ -112,8 +112,8 @@ export default function EditConsultationPage() {
           anamnesisDigestive: consult.anamnesisDigestive || '',
           anamnesisCardioThoracic: consult.anamnesisCardioThoracic || '',
           anamnesisGynecological: consult.anamnesisGynecological || '',
-          amnamnesisSleep: consult.amnamnesisSleep || '',
-          amnamnesisPsychological: consult.amnamnesisPsychological || '',
+          anamnesisSleep: consult.anamnesisSleep || '',
+          anamnesisPsychological: consult.anamnesisPsychological || '',
           nextAppointmentDate,
           nextAppointmentTime
         });
@@ -163,8 +163,8 @@ export default function EditConsultationPage() {
         anamnesisDigestive: formData.anamnesisDigestive || undefined,
         anamnesisCardioThoracic: formData.anamnesisCardioThoracic || undefined,
         anamnesisGynecological: formData.anamnesisGynecological || undefined,
-        amnamnesisSleep: formData.amnamnesisSleep || undefined,
-        amnamnesisPsychological: formData.amnamnesisPsychological || undefined,
+        anamnesisSleep: formData.anamnesisSleep || undefined,
+        anamnesisPsychological: formData.anamnesisPsychological || undefined,
         nextAppointment: nextAppointmentDateTime
       };
 
@@ -405,14 +405,14 @@ export default function EditConsultationPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="amnamnesisSleep" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="anamnesisSleep" className="block text-sm font-medium text-gray-700">
                     Sommeil
                   </label>
                   <textarea
-                    id="amnamnesisSleep"
-                    name="amnamnesisSleep"
+                    id="anamnesisSleep"
+                    name="anamnesisSleep"
                     rows={3}
-                    value={formData.amnamnesisSleep}
+                    value={formData.anamnesisSleep}
                     onChange={handleInputChange}
                     placeholder="Détails sur le sommeil..."
                     className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"
@@ -420,14 +420,14 @@ export default function EditConsultationPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="amnamnesisPsychological" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="anamnesisPsychological" className="block text-sm font-medium text-gray-700">
                     Psychologique & Émotionnel
                   </label>
                   <textarea
-                    id="amnamnesisPsychological"
-                    name="amnamnesisPsychological"
+                    id="anamnesisPsychological"
+                    name="anamnesisPsychological"
                     rows={3}
-                    value={formData.amnamnesisPsychological}
+                    value={formData.anamnesisPsychological}
                     onChange={handleInputChange}
                     placeholder="Détails sur l'état psychologique/émotionnel..."
                     className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"

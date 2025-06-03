@@ -30,7 +30,7 @@ export default function ConsultationDetailPage() {
             'id', 'date', 'duration', 'reason', 'treatment', 'recommendations', 
             'notes', 'createdAt', 'updatedAt', 'nextAppointment',
             'anamnesisSkullCervical', 'anamnesisDigestive', 'anamnesisCardioThoracic',
-            'anamnesisGynecological', 'amnamnesisSleep', 'amnamnesisPsychological',
+            'anamnesisGynecological', 'anamnesisSleep', 'anamnesisPsychological',
             'patient.id', 'patient.firstName', 'patient.lastName', 
             'patient.email', 'patient.phone', 'patient.dateOfBirth'
           ]
@@ -152,7 +152,7 @@ export default function ConsultationDetailPage() {
           {/* Anamnèse */}
           {(consultation.anamnesisSkullCervical || consultation.anamnesisDigestive || 
             consultation.anamnesisCardioThoracic || consultation.anamnesisGynecological || 
-            consultation.amnamnesisSleep || consultation.amnamnesisPsychological) && (
+            consultation.anamnesisSleep || consultation.anamnesisPsychological) && (
             <div className="bg-white shadow rounded-lg">
               <div className="px-4 py-5 sm:p-6">
                 <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
@@ -183,16 +183,16 @@ export default function ConsultationDetailPage() {
                       <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{consultation.anamnesisGynecological}</dd>
                     </div>
                   )}
-                  {consultation.amnamnesisSleep && (
+                  {consultation.anamnesisSleep && (
                     <div>
                       <dt className="text-sm font-medium text-gray-500">Sommeil</dt>
-                      <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{consultation.amnamnesisSleep}</dd>
+                      <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{consultation.anamnesisSleep}</dd>
                     </div>
                   )}
-                  {consultation.amnamnesisPsychological && (
+                  {consultation.anamnesisPsychological && (
                     <div>
                       <dt className="text-sm font-medium text-gray-500">Psychologique & Émotionnel</dt>
-                      <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{consultation.amnamnesisPsychological}</dd>
+                      <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{consultation.anamnesisPsychological}</dd>
                     </div>
                   )}
                 </div>

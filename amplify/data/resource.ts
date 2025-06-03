@@ -44,8 +44,8 @@ const schema = a.schema({
       anamnesisDigestive: a.string(), // Système digestif
       anamnesisCardioThoracic: a.string(), // Cardique / pulmonaire / thoracique
       anamnesisGynecological: a.string(), // Gynécologique
-      amnamnesisSleep: a.string(), // Sommeil
-      amnamnesisPsychological: a.string(), // Psychologique / Emotionnel
+      anamnesisSleep: a.string(), // Sommeil
+      anamnesisPsychological: a.string(), // Psychologique / Emotionnel
       treatment: a.string(),
       recommendations: a.string(),
       nextAppointment: a.datetime(),
