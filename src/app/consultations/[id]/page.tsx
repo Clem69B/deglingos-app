@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../../amplify/data/resource';
-import type { ConsultationWithPatient } from '../../types';
+import type { ConsultationWithPatient } from '../../../types';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -37,7 +37,7 @@ export default function ConsultationDetailPage() {
         }
       );
       if (response.data) {
-        setConsultation(response.data);
+        setConsultation(response.data as ConsultationWithPatient);
       }
     } catch (error) {
       console.error('Erreur lors du chargement de la consultation:', error);

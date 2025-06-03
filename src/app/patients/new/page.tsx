@@ -3,28 +3,11 @@
 import { useState } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../../amplify/data/resource';
-import type { CreatePatientInput } from '../../types';
+import type { CreatePatientInput, PatientFormData } from '../../../types';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 const client = generateClient<Schema>();
-
-interface PatientFormData {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  dateOfBirth: string;
-  address: string;
-  city: string;
-  postalCode: string;
-  gender: 'M' | 'F' | 'OTHER' | '';
-  profession: string;
-  emergencyContact: string;
-  medicalHistory: string;
-  allergies: string;
-  currentMedications: string;
-}
 
 export default function NewPatientPage() {
   const router = useRouter();

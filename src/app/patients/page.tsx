@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../amplify/data/resource';
 import Link from 'next/link';
-import { PatientListItem } from './types';
+import type { PatientListItem } from '../../types';
 
 const client = generateClient<Schema>();
 
@@ -164,9 +164,11 @@ export default function PatientsPage() {
                           Né(e) le {new Date(patient.dateOfBirth).toLocaleDateString('fr-FR')}
                         </div>
                       )}
-                      <div className="mt-1">
-                        Créé le {new Date(patient.createdAt).toLocaleDateString('fr-FR')}
-                      </div>
+                      {patient.createdAt && (
+                        <div className="mt-1">
+                          Créé le {new Date(patient.createdAt).toLocaleDateString('fr-FR')}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </Link>
