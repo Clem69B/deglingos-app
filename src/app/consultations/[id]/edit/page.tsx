@@ -5,8 +5,7 @@ import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../../../amplify/data/resource';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import type { Consultation, UpdateConsultationInput } from '../../../types';
-import type { PatientListItem } from '../../../patients/types';
+import type { Consultation, UpdateConsultationInput, PatientListItem } from '../../../../types';
 
 const client = generateClient<Schema>();
 

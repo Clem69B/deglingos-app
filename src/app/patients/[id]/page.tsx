@@ -6,27 +6,9 @@ import type { Schema } from '../../../../amplify/data/resource';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
-import type { PatientDetail, ConsultationSummary, InvoiceSummary } from '../types';
-import type { UpdatePatientInput } from '../../types';
+import type { PatientDetail, ConsultationSummary, InvoiceSummary, PatientFormData, UpdatePatientInput } from '../../../types';
 
 const client = generateClient<Schema>();
-
-interface PatientFormData {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  dateOfBirth: string;
-  address: string;
-  city: string;
-  postalCode: string;
-  gender: 'M' | 'F' | 'OTHER' | '';
-  profession: string;
-  emergencyContact: string;
-  medicalHistory: string;
-  allergies: string;
-  currentMedications: string;
-}
 
 export default function PatientDetailPage() {
   const router = useRouter();

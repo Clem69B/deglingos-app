@@ -3,8 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../amplify/data/resource';
-import type { ConsultationListItem } from './types';
-import type { PatientListItem } from '../patients/types';
+import type { ConsultationListItem, PatientListItem } from '../../types';
 import Link from 'next/link';
 
 const client = generateClient<Schema>();
