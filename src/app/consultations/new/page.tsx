@@ -26,8 +26,8 @@ export default function NewConsultationPage() {
     anamnesisDigestive: '',
     anamnesisCardioThoracic: '',
     anamnesisGynecological: '',
-    amnamnesisSleep: '',
-    amnamnesisPsychological: '',
+    anamnesisSleep: '',
+    anamnesisPsychological: '',
     nextAppointmentDate: '',
     nextAppointmentTime: ''
   });
@@ -108,8 +108,8 @@ export default function NewConsultationPage() {
         anamnesisDigestive: formData.anamnesisDigestive || undefined,
         anamnesisCardioThoracic: formData.anamnesisCardioThoracic || undefined,
         anamnesisGynecological: formData.anamnesisGynecological || undefined,
-        amnamnesisSleep: formData.amnamnesisSleep || undefined,
-        amnamnesisPsychological: formData.amnamnesisPsychological || undefined,
+        anamnesisSleep: formData.anamnesisSleep || undefined,
+        anamnesisPsychological: formData.anamnesisPsychological || undefined,
         nextAppointment: nextAppointmentDateTime
       };
 
@@ -332,14 +332,14 @@ export default function NewConsultationPage() {
 
                 {/* Anamnèse - Sommeil */}
                 <div>
-                  <label htmlFor="amnamnesisSleep" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="anamnesisSleep" className="block text-sm font-medium text-gray-700">
                     Sommeil
                   </label>
                   <textarea
-                    id="amnamnesisSleep"
-                    name="amnamnesisSleep"
+                    id="anamnesisSleep"
+                    name="anamnesisSleep"
                     rows={3}
-                    value={formData.amnamnesisSleep}
+                    value={formData.anamnesisSleep}
                     onChange={handleInputChange}
                     placeholder="Détails sur le sommeil..."
                     className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"
@@ -348,14 +348,14 @@ export default function NewConsultationPage() {
 
                 {/* Anamnèse - Psychologique / Emotionnel */}
                 <div>
-                  <label htmlFor="amnamnesisPsychological" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="anamnesisPsychological" className="block text-sm font-medium text-gray-700">
                     Psychologique & Émotionnel
                   </label>
                   <textarea
-                    id="amnamnesisPsychological"
-                    name="amnamnesisPsychological"
+                    id="anamnesisPsychological"
+                    name="anamnesisPsychological"
                     rows={3}
-                    value={formData.amnamnesisPsychological}
+                    value={formData.anamnesisPsychological}
                     onChange={handleInputChange}
                     placeholder="Détails sur l'état psychologique/émotionnel..."
                     className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"

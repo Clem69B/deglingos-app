@@ -7,8 +7,8 @@ export interface AnamnesisData {
   anamnesisDigestive?: string | null;
   anamnesisCardioThoracic?: string | null;
   anamnesisGynecological?: string | null;
-  amnamnesisSleep?: string | null;
-  amnamnesisPsychological?: string | null;
+  anamnesisSleep?: string | null;
+  anamnesisPsychological?: string | null;
 }
 
 // Interface de base pour les consultations
