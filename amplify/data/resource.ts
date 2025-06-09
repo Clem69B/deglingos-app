@@ -15,21 +15,23 @@ const schema = a.schema({
       postalCode: a.string(),
       gender: a.enum(['M', 'F', 'OTHER']),
       profession: a.string(),
-      emergencyContact: a.string(),
+      referingPhysician: a.string(),
       medicalHistory: a.string(),
-      allergies: a.string(),
+      chirgicalHistory: a.string(),
       currentMedications: a.string(),
+      activities: a.string(),
       consultations: a.hasMany('Consultation', 'patientId'),
       Appointment: a.hasMany('Appointment', 'patientId'),
       invoices: a.hasMany('Invoice', 'patientId'),
       createdAt: a.datetime(),
       updatedAt: a.datetime(),
     })
+    .disableOperations(["subscriptions"])
     .authorization((allow) => [
       allow.group('osteopaths'),
       allow.group('assistants').to(['read']),
     ]),
-
+  
   // Consultation Model
   Consultation: a
     .model({
@@ -54,6 +56,7 @@ const schema = a.schema({
       createdAt: a.datetime(),
       updatedAt: a.datetime(),
     })
+    .disableOperations(["subscriptions"])
     .authorization((allow) => [
       allow.group('osteopaths')
     ]),
@@ -79,9 +82,10 @@ const schema = a.schema({
       createdAt: a.datetime(),
       updatedAt: a.datetime(),
     })
+    .disableOperations(["subscriptions"])
     .authorization((allow) => [
       allow.group('osteopaths'),
-      allow.group('assistants').to(['read', 'create']),
+      allow.group('assistants').to(['read', 'create', 'update']),
     ]),
 
   // Appointment Model (pour la synchronisation externe)
@@ -100,6 +104,7 @@ const schema = a.schema({
       createdAt: a.datetime(),
       updatedAt: a.datetime(),
     })
+    .disableOperations(["subscriptions"])
     .authorization((allow) => [
       allow.group('osteopaths'),
       allow.group('assistants'),
@@ -112,8 +117,8 @@ export const data = defineData({
   schema,
   authorizationModes: {
     defaultAuthorizationMode: 'userPool',
-    apiKeyAuthorizationMode: {
-      expiresInDays: 30,
-    },
+//    apiKeyAuthorizationMode: {
+//      expiresInDays: 30,
+//    },
   },
 });

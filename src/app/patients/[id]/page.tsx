@@ -1,14 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../../amplify/data/resource';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
-import type { PatientDetail, ConsultationSummary, InvoiceSummary, PatientFormData, UpdatePatientInput } from '../../../types';
+import type { PatientDetail, ConsultationSummary, InvoiceSummary } from '../../../types';
+import EditableField from '../../../components/EditableField';
+import ProtectedLink from '../../../components/ProtectedLink';
+import Link from 'next/link';
+import { useDirtyForm } from '../../../contexts/DirtyFormContext';
 
 const client = generateClient<Schema>();
+const PATIENT_DETAIL_PAGE_DIRTY_SOURCE = 'patientDetailPage';
 
 export default function PatientDetailPage() {
   const router = useRouter();
@@ -19,59 +23,61 @@ export default function PatientDetailPage() {
   const [consultations, setConsultations] = useState<ConsultationSummary[]>([]);
   const [unpaidInvoices, setUnpaidInvoices] = useState<InvoiceSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [formData, setFormData] = useState<PatientFormData>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    dateOfBirth: '',
-    address: '',
-    city: '',
-    postalCode: '',
-    gender: '',
-    profession: '',
-    emergencyContact: '',
-    medicalHistory: '',
-    allergies: '',
-    currentMedications: '',
-  });
+  const [generalError, setGeneralError] = useState<string | null>(null);
 
-  // Load patient data and related information
+  // Dirty state management
+  const [dirtyFields, setDirtyFields] = useState<Set<string>>(new Set()); 
+  const { isPageDirty, addDirtySource, removeDirtySource } = useDirtyForm(); // Récupérer isPageDirty
+
+
+  // Nouvelle gestion dirty: chaque champ a sa propre sourceId, plus besoin de dirtyFields local
+  const handleDirtyStateChange = useCallback(
+    (fieldName: string, isDirty: boolean) => {
+      const sourceId = `${PATIENT_DETAIL_PAGE_DIRTY_SOURCE}:${fieldName}`;
+      if (isDirty) {
+        addDirtySource(sourceId);
+      } else {
+        removeDirtySource(sourceId);
+      }
+    },
+    [addDirtySource, removeDirtySource]
+  );
+
+  useEffect(() => {
+    // Remove dirty source when the component unmounts
+    return () => {
+      removeDirtySource(PATIENT_DETAIL_PAGE_DIRTY_SOURCE);
+    };
+  }, [removeDirtySource]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (isPageDirty) { // Utiliser l'état global du contexte
+        event.preventDefault();
+        event.returnValue = 'Vous avez des modifications non enregistrées. Êtes-vous sûr de vouloir quitter ?';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isPageDirty]); // Dépend de l'état global du contexte
+
   useEffect(() => {
     const loadPatientData = async () => {
       try {
         setLoading(true);
+        setGeneralError(null);
 
-        // Load patient
         const patientResponse = await client.models.Patient.get({ id: patientId });
         if (!patientResponse.data) {
           router.push('/patients');
           return;
         }
-
-        const patientData = patientResponse.data as PatientDetail; // Cast to new type
+        const patientData = patientResponse.data as PatientDetail;
         setPatient(patientData);
-
-        // Initialize form data
-        setFormData({
-          firstName: patientData.firstName || '',
-          lastName: patientData.lastName || '',
-          email: patientData.email || '',
-          phone: patientData.phone || '',
-          dateOfBirth: patientData.dateOfBirth || '',
-          address: patientData.address || '',
-          city: patientData.city || '',
-          postalCode: patientData.postalCode || '',
-          gender: patientData.gender || '',
-          profession: patientData.profession || '',
-          emergencyContact: patientData.emergencyContact || '',
-          medicalHistory: patientData.medicalHistory || '',
-          allergies: patientData.allergies || '',
-          currentMedications: patientData.currentMedications || '',
-        });
 
         // Load consultations
         const consultationsResponse = await client.models.Consultation.list({
@@ -80,7 +86,7 @@ export default function PatientDetailPage() {
         if (consultationsResponse.data) {
           const sortedConsultations = consultationsResponse.data.sort(
             (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-          ) as ConsultationSummary[]; // Cast to new type
+          ) as ConsultationSummary[];
           setConsultations(sortedConsultations);
         }
 
@@ -92,12 +98,12 @@ export default function PatientDetailPage() {
           },
         });
         if (invoicesResponse.data) {
-          setUnpaidInvoices(invoicesResponse.data as InvoiceSummary[]); // Cast to new type
+          setUnpaidInvoices(invoicesResponse.data as InvoiceSummary[]);
         }
 
       } catch (error) {
         console.error('Error loading patient data:', error);
-        router.push('/patients');
+        setGeneralError('Erreur lors du chargement des données du patient.');
       } finally {
         setLoading(false);
       }
@@ -108,108 +114,54 @@ export default function PatientDetailPage() {
     }
   }, [patientId, router]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
-  };
+  // handleInputChange, validateForm, handleSave, handleCancel sont supprimés
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
+  const updatePatientField = async (entityId: string, fieldName: string, newValue: any) => {
+    if (!patient) return;
 
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = 'Le prénom est obligatoire';
-    }
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Le nom est obligatoire';
-    }
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Veuillez saisir une adresse email valide';
-    }
-    if (formData.phone && !/^[\d\s\-\+\(\)]+$/.test(formData.phone)) {
-      newErrors.phone = 'Veuillez saisir un numéro de téléphone valide';
-    }
-    if (formData.dateOfBirth && new Date(formData.dateOfBirth) > new Date()) {
-      newErrors.dateOfBirth = 'La date de naissance ne peut pas être dans le futur';
-    }
+    const oldPatientData = { ...patient };
+    // @ts-ignore
+    setPatient(prev => prev ? { ...prev, [fieldName]: newValue } : null);
+    setGeneralError(null);
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSave = async () => {
-    if (!validateForm()) {
-      return;
-    }
-
-    setSaving(true);
     try {
-      // Utiliser le nouveau type UpdatePatientInput
-      const updateData: UpdatePatientInput = {
-        id: patientId,
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
+      const updateData: { id: string;[key: string]: any } = {
+        id: entityId,
       };
 
-      // Only include optional fields if they have values
-      if (formData.email.trim()) updateData.email = formData.email.trim();
-      if (formData.phone.trim()) updateData.phone = formData.phone.trim();
-      if (formData.dateOfBirth) updateData.dateOfBirth = formData.dateOfBirth;
-      if (formData.address.trim()) updateData.address = formData.address.trim();
-      if (formData.city.trim()) updateData.city = formData.city.trim();
-      if (formData.postalCode.trim()) updateData.postalCode = formData.postalCode.trim();
-      if (formData.gender) updateData.gender = formData.gender;
-      if (formData.profession.trim()) updateData.profession = formData.profession.trim();
-      if (formData.emergencyContact.trim()) updateData.emergencyContact = formData.emergencyContact.trim();
-      if (formData.medicalHistory.trim()) updateData.medicalHistory = formData.medicalHistory.trim();
-      if (formData.allergies.trim()) updateData.allergies = formData.allergies.trim();
-      if (formData.currentMedications.trim()) updateData.currentMedications = formData.currentMedications.trim();
+      let processedValue = newValue;
+      if (typeof newValue === 'string') {
+        processedValue = newValue.trim();
+      }
+      // Pour les champs optionnels, si la valeur après trim est vide, la mettre à null
+      if (processedValue === '' && ['email', 'phone', 'dateOfBirth', 'address', 'city', 'postalCode', 'gender', 'profession', 'referingPhysician', 'medicalHistory', 'chirgicalHistory', 'currentMedications', 'activities'].includes(fieldName)) {
+        processedValue = null;
+      }
+
+      updateData[fieldName] = processedValue;
 
       const response = await client.models.Patient.update(updateData);
 
-      if (response.data) {
-        setPatient(response.data as PatientDetail); // Cast to new type
-        setIsEditing(false);
-        setErrors({});
-      } else {
-        console.error('Error updating patient:', response.errors);
-        setErrors({ general: 'Une erreur est survenue lors de la mise à jour du patient' });
+      if (response.errors || !response.data) {
+        console.error('Error updating patient field:', response.errors);
+        setPatient(oldPatientData);
+        const errorMessage = `Erreur lors de la mise à jour du champ '${fieldName}'.`;
+        setGeneralError(errorMessage);
+        throw new Error(errorMessage);
       }
+      setPatient(response.data as PatientDetail);
+      // Après une sauvegarde réussie, le champ n'est plus dirty. EditableField s'en chargera via son useEffect.
     } catch (error) {
-      console.error('Error updating patient:', error);
-      setErrors({ general: 'Une erreur est survenue lors de la mise à jour du patient' });
-    } finally {
-      setSaving(false);
+      console.error(`Error in updatePatientField for ${fieldName}:`, error);
+      setPatient(oldPatientData);
+      const errorMessage = error instanceof Error ? error.message : `Une erreur est survenue lors de la mise à jour du champ '${fieldName}'.`;
+      setGeneralError(errorMessage);
+      throw new Error(errorMessage); // Rethrow pour que EditableField puisse le catcher
     }
   };
 
-  const handleCancel = () => {
-    if (patient) {
-      setFormData({
-        firstName: patient.firstName || '',
-        lastName: patient.lastName || '',
-        email: patient.email || '',
-        phone: patient.phone || '',
-        profession: patient.profession || '',
-        dateOfBirth: patient.dateOfBirth || '',
-        address: patient.address || '',
-        city: patient.city || '',
-        postalCode: patient.postalCode || '',
-        gender: patient.gender || '',
-        emergencyContact: patient.emergencyContact || '',
-        medicalHistory: patient.medicalHistory || '',
-        allergies: patient.allergies || '',
-        currentMedications: patient.currentMedications || '',
-      });
-    }
-    setIsEditing(false);
-    setErrors({});
-  };
-
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return ''; // EditableField gère "Non renseigné"
     return new Date(dateString).toLocaleDateString('fr-FR', {
       year: 'numeric',
       month: 'long',
@@ -227,7 +179,8 @@ export default function PatientDetailPage() {
     });
   };
 
-  const calculateAge = (birthDate: string) => {
+  const calculateAge = (birthDate: string | null | undefined) => {
+    if (!birthDate) return 'N/A';
     const today = new Date();
     const birth = new Date(birthDate);
     let age = today.getFullYear() - birth.getFullYear();
@@ -240,8 +193,8 @@ export default function PatientDetailPage() {
     return age;
   };
 
-  const getPatientInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  const getPatientInitials = (firstName: string | null | undefined, lastName: string | null | undefined) => {
+    return `${(firstName || '').charAt(0)}${(lastName || '').charAt(0)}`.toUpperCase();
   };
 
   if (loading) {
@@ -309,377 +262,217 @@ export default function PatientDetailPage() {
             </div>
           )}
 
-          <Link
+          <ProtectedLink
             href="/patients"
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            isDirty={isPageDirty} // Utiliser l'état global du contexte
           >
             Retour
-          </Link>
-
-          {!isEditing ? (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-            >
-              Modifier
-            </button>
-          ) : (
-            <div className="flex space-x-2">
-              <button
-                onClick={handleCancel}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
-              >
-                {saving ? 'Enregistrement...' : 'Enregistrer'}
-              </button>
-            </div>
-          )}
+          </ProtectedLink>
+          {/* Les boutons Modifier/Annuler/Enregistrer globaux sont supprimés */}
         </div>
       </div>
 
-      {/* Error Message */}
-      {errors.general && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <div className="text-sm text-red-600">{errors.general}</div>
+
+
+      {/* General Error Message */}
+      {generalError && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 mt-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v4a1 1 0 102 0V7zm-1 7a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{generalError}</p>
+            </div>
+          </div>
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
         {/* Patient Information */}
         <div className="lg:col-span-2 space-y-6">
           {/* Personal Information */}
           <div className="bg-white shadow rounded-lg p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Informations personnelles</h3>
-
-            {isEditing ? (
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
-                    Prénom *
-                  </label>
-                  <input
-                    type="text"
-                    id="firstName"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${errors.firstName ? 'border-red-300' : ''
-                      }`}
-                  />
-                  {errors.firstName && (
-                    <p className="mt-2 text-sm text-red-600">{errors.firstName}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-                    Nom *
-                  </label>
-                  <input
-                    type="text"
-                    id="lastName"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${errors.lastName ? 'border-red-300' : ''
-                      }`}
-                  />
-                  {errors.lastName && (
-                    <p className="mt-2 text-sm text-red-600">{errors.lastName}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                    E-mail
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${errors.email ? 'border-red-300' : ''
-                      }`}
-                  />
-                  {errors.email && (
-                    <p className="mt-2 text-sm text-red-600">{errors.email}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                    Téléphone
-                  </label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${errors.phone ? 'border-red-300' : ''
-                      }`}
-                  />
-                  {errors.phone && (
-                    <p className="mt-2 text-sm text-red-600">{errors.phone}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700">
-                    Date de naissance
-                  </label>
-                  <input
-                    type="date"
-                    id="dateOfBirth"
-                    name="dateOfBirth"
-                    value={formData.dateOfBirth}
-                    onChange={handleInputChange}
-                    className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${errors.dateOfBirth ? 'border-red-300' : ''
-                      }`}
-                  />
-                  {errors.dateOfBirth && (
-                    <p className="mt-2 text-sm text-red-600">{errors.dateOfBirth}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="gender" className="block text-sm font-medium text-gray-700">
-                    Genre
-                  </label>
-                  <select
-                    id="gender"
-                    name="gender"
-                    value={formData.gender}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  >
-                    <option value="">Sélectionner le genre</option>
-                    <option value="M">Homme</option>
-                    <option value="F">Femme</option>
-                    <option value="OTHER">Autre</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="profession" className="block text-sm font-medium text-gray-700">
-                    Profession
-                  </label>
-                  <input
-                    type="text"
-                    id="profession"
-                    name="profession"
-                    value={formData.profession}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    placeholder="Profession du patient"
-                  />
-                </div>
-              </div>
-            ) : (
-              <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Date de naissance</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {patient.dateOfBirth ? formatDate(patient.dateOfBirth) : 'Non renseignée'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Genre</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {patient.gender === 'M' ? 'Homme' : patient.gender === 'F' ? 'Femme' : patient.gender === 'OTHER' ? 'Autre' : 'Non renseigné'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">E-mail</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {patient.email || 'Non renseigné'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Téléphone</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {patient.phone || 'Non renseigné'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Profession</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {patient.profession || 'Non renseignée'}
-                  </dd>
-                </div>
-              </dl>
-            )}
+            <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
+              <EditableField
+                label="Prénom"
+                fieldName="firstName"
+                value={patient.firstName}
+                entityId={patientId}
+                updateFunction={updatePatientField}
+                required
+                validationRules={(val) => (!val || String(val).trim() === '' ? 'Le prénom est obligatoire' : null)}
+                onDirtyStateChange={handleDirtyStateChange}
+              />
+              <EditableField
+                label="Nom"
+                fieldName="lastName"
+                value={patient.lastName}
+                entityId={patientId}
+                updateFunction={updatePatientField}
+                required
+                validationRules={(val) => (!val || String(val).trim() === '' ? 'Le nom est obligatoire' : null)}
+                onDirtyStateChange={handleDirtyStateChange}
+              />
+              <EditableField
+                label="E-mail"
+                fieldName="email"
+                value={patient.email}
+                entityId={patientId}
+                updateFunction={updatePatientField}
+                inputType="email"
+                placeholder="exemple@domaine.com"
+                validationRules={(val) => (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(val)) ? 'Email invalide' : null)}
+                onDirtyStateChange={handleDirtyStateChange}
+              />
+              <EditableField
+                label="Téléphone"
+                fieldName="phone"
+                value={patient.phone}
+                entityId={patientId}
+                updateFunction={updatePatientField}
+                inputType="tel"
+                placeholder="0612345678"
+                validationRules={(val) => (val && !/^[\d\s\-\+\(\)]+$/.test(String(val)) ? 'Téléphone invalide' : null)}
+                onDirtyStateChange={handleDirtyStateChange}
+              />
+              <EditableField
+                label="Date de naissance"
+                fieldName="dateOfBirth"
+                value={patient.dateOfBirth}
+                entityId={patientId}
+                updateFunction={updatePatientField}
+                inputType="date"
+                validationRules={(val) => (val && new Date(String(val)) > new Date() ? 'Date future invalide' : null)}
+                onDirtyStateChange={handleDirtyStateChange}
+              />
+              <EditableField
+                label="Genre"
+                fieldName="gender"
+                value={patient.gender}
+                entityId={patientId}
+                updateFunction={updatePatientField}
+                inputType="select"
+                placeholder="Sélectionner..."
+                options={[
+                  { value: '', label: 'Non spécifié' },
+                  { value: 'M', label: 'Homme' },
+                  { value: 'F', label: 'Femme' },
+                  { value: 'OTHER', label: 'Autre' },
+                ]}
+                onDirtyStateChange={handleDirtyStateChange}
+              />
+              <EditableField
+                label="Profession"
+                fieldName="profession"
+                value={patient.profession}
+                entityId={patientId}
+                updateFunction={updatePatientField}
+                placeholder="Profession du patient"
+                onDirtyStateChange={handleDirtyStateChange}
+              />
+            </div>
           </div>
 
           {/* Address Information */}
           <div className="bg-white shadow rounded-lg p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Adresse</h3>
-
-            {isEditing ? (
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-                    Adresse
-                  </label>
-                  <input
-                    type="text"
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  />
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="city" className="block text-sm font-medium text-gray-700">
-                      Ville
-                    </label>
-                    <input
-                      type="text"
-                      id="city"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700">
-                      Code postal
-                    </label>
-                    <input
-                      type="text"
-                      id="postalCode"
-                      name="postalCode"
-                      value={formData.postalCode}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    />
-                  </div>
-                </div>
+            <div className="space-y-4">
+              <EditableField
+                label="Adresse"
+                fieldName="address"
+                value={patient.address}
+                entityId={patientId}
+                updateFunction={updatePatientField}
+                inputType="textarea"
+                placeholder="1 rue de la Paix"
+                onDirtyStateChange={handleDirtyStateChange}
+              />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <EditableField
+                  label="Ville"
+                  fieldName="city"
+                  value={patient.city}
+                  entityId={patientId}
+                  updateFunction={updatePatientField}
+                  placeholder="Paris"
+                  onDirtyStateChange={handleDirtyStateChange}
+                />
+                <EditableField
+                  label="Code postal"
+                  fieldName="postalCode"
+                  value={patient.postalCode}
+                  entityId={patientId}
+                  updateFunction={updatePatientField}
+                  placeholder="75001"
+                  onDirtyStateChange={handleDirtyStateChange}
+                />
               </div>
-            ) : (
-              <div>
-                {patient.address || patient.city || patient.postalCode ? (
-                  <div className="text-sm text-gray-900">
-                    {patient.address && <div>{patient.address}</div>}
-                    {(patient.city || patient.postalCode) && (
-                      <div>
-                        {patient.postalCode} {patient.city}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500">Aucune adresse renseignée</p>
-                )}
-              </div>
-            )}
+            </div>
           </div>
 
           {/* Medical Information */}
           <div className="bg-white shadow rounded-lg p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Informations médicales</h3>
-
-            {isEditing ? (
-              <div className="space-y-6">
-                <div>
-                  <label htmlFor="emergencyContact" className="block text-sm font-medium text-gray-700">
-                    Contact d&apos;urgence
-                  </label>
-                  <input
-                    type="text"
-                    id="emergencyContact"
-                    name="emergencyContact"
-                    value={formData.emergencyContact}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    placeholder="Nom et numéro de téléphone"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="medicalHistory" className="block text-sm font-medium text-gray-700">
-                    Antécédents médicaux
-                  </label>
-                  <textarea
-                    id="medicalHistory"
-                    name="medicalHistory"
-                    rows={3}
-                    value={formData.medicalHistory}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    placeholder="Maladies, opérations, etc."
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="allergies" className="block text-sm font-medium text-gray-700">
-                    Allergies
-                  </label>
-                  <textarea
-                    id="allergies"
-                    name="allergies"
-                    rows={2}
-                    value={formData.allergies}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    placeholder="Allergies connues"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="currentMedications" className="block text-sm font-medium text-gray-700">
-                    Médicaments en cours
-                  </label>
-                  <textarea
-                    id="currentMedications"
-                    name="currentMedications"
-                    rows={2}
-                    value={formData.currentMedications}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    placeholder="Médicaments et dosages actuels"
-                  />
-                </div>
-              </div>
-            ) : (
-              <dl className="space-y-6">
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Contact d&apos;urgence</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {patient.emergencyContact || 'Non renseigné'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Antécédents médicaux</dt>
-                  <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">
-                    {patient.medicalHistory || 'Aucun antécédent renseigné'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Allergies</dt>
-                  <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">
-                    {patient.allergies || 'Aucune allergie connue'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Médicaments en cours</dt>
-                  <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">
-                    {patient.currentMedications || 'Aucun médicament en cours'}
-                  </dd>
-                </div>
-              </dl>
-            )}
+            <div className="space-y-6">
+              <EditableField
+                label="Médecin traitant"
+                fieldName="referingPhysician"
+                value={patient.referingPhysician}
+                entityId={patientId}
+                updateFunction={updatePatientField}
+                placeholder="Dr. Nom Prénom"
+                onDirtyStateChange={handleDirtyStateChange}
+              />
+              <EditableField
+                label="Antécédents médicaux"
+                fieldName="medicalHistory"
+                value={patient.medicalHistory}
+                entityId={patientId}
+                updateFunction={updatePatientField}
+                inputType="textarea"
+                placeholder="Maladies, allergies, etc."
+                onDirtyStateChange={handleDirtyStateChange}
+              />
+              <EditableField
+                label="Antécédents chirurgicaux"
+                fieldName="chirgicalHistory"
+                value={patient.chirgicalHistory}
+                entityId={patientId}
+                updateFunction={updatePatientField}
+                inputType="textarea"
+                placeholder="Opérations, interventions, etc."
+                onDirtyStateChange={handleDirtyStateChange}
+              />
+              <EditableField
+                label="Médicaments en cours"
+                fieldName="currentMedications"
+                value={patient.currentMedications}
+                entityId={patientId}
+                updateFunction={updatePatientField}
+                inputType="textarea"
+                placeholder="Nom du médicament, dosage, fréquence"
+                onDirtyStateChange={handleDirtyStateChange}
+              />
+              <EditableField
+                label="Activités et mode de vie"
+                fieldName="activities"
+                value={patient.activities}
+                entityId={patientId}
+                updateFunction={updatePatientField}
+                inputType="textarea"
+                placeholder="Sport, travail, habitudes..."
+                onDirtyStateChange={handleDirtyStateChange}
+              />
+            </div>
           </div>
         </div>
+
 
         {/* Sidebar */}
         <div className="space-y-6">
@@ -721,8 +514,8 @@ export default function PatientDetailPage() {
                     </div>
                     <div className="mt-2">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${invoice.status === 'OVERDUE'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-yellow-100 text-yellow-800'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-yellow-100 text-yellow-800'
                         }`}>
                         {invoice.status === 'OVERDUE' ? 'En retard' :
                           invoice.status === 'SENT' ? 'Envoyée' :
@@ -740,99 +533,54 @@ export default function PatientDetailPage() {
             </div>
           )}
 
-          {/* Recent Consultations Summary */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Dernières consultations</h3>
-            {consultations.length > 0 ? (
-              <div className="space-y-3">
-                {consultations.slice(0, 3).map((consultation) => (
-                  <div key={consultation.id} className="border-l-4 border-indigo-400 pl-3">
-                    <p className="text-sm font-medium text-gray-900">
-                      {consultation.reason}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {formatDateTime(consultation.date)}
-                    </p>
-                  </div>
-                ))}
-                {consultations.length > 3 && (
-                  <p className="text-sm text-gray-500 text-center">
-                    Et {consultations.length - 3} autres consultations...
-                  </p>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">Aucune consultation enregistrée</p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Full Consultations List */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Historique des consultations</h3>
-        </div>
-        <div className="overflow-hidden">
-          {consultations.length > 0 ? (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Motif
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Durée
-                  </th>
-                  <th className="relative px-6 py-3">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {consultations.map((consultation) => (
-                  <tr key={consultation.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatDateTime(consultation.date)}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      <div className="max-w-xs truncate" title={consultation.reason}>
-                        {consultation.reason}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {consultation.duration}min
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button className="text-indigo-600 hover:text-indigo-900">
-                          <Link href={`/consultations/${consultation.id}`} className="block hover:bg-gray-50 px-4 py-4 sm:px-6">
-                          Voir détails
-                          </Link>
-                        </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className="text-center py-12">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">Aucune consultation</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Ce patient n&apos;a pas encore de consultation enregistrée.
-              </p>
-              <div className="mt-6">
-                <button className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
-                  Créer la première consultation
-                </button>
-              </div>
+          {/* Full Consultations List */}
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900">Historique des consultations</h3>
             </div>
-          )}
+            <div className="px-6 py-4">
+              {consultations.length > 0 ? (
+                <ul className="space-y-4">
+                  {consultations.map((consultation) => (
+                    <li key={consultation.id} className="p-3 border border-gray-200 rounded-md hover:bg-gray-50 transition-colors duration-150">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-grow">
+                          <p className="text-sm font-medium text-indigo-600">
+                            {formatDateTime(consultation.date)}
+                          </p>
+                          <p className="text-sm text-gray-700 mt-1">
+                            <span className="font-medium">Motif:</span>
+                            <span 
+                              className="ml-1 text-gray-600 truncate inline-block align-bottom max-w-xs" 
+                              title={consultation.reason || "Non spécifié"}
+                            >
+                              {consultation.reason || "Non spécifié"}
+                            </span>
+                          </p>
+                        </div>
+                        <Link 
+                          href={`/consultations/${consultation.id}`} 
+                          className="ml-4 flex-shrink-0 text-sm text-indigo-600 hover:text-indigo-900 hover:underline whitespace-nowrap"
+                        >
+                          Voir détails
+                        </Link>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="text-center py-8">
+                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">Aucune consultation</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Ce patient n&apos;a pas encore de consultation enregistrée.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
