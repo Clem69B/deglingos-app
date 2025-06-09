@@ -8,9 +8,9 @@ export interface PatientBaseData extends PersonBaseData {
   postalCode?: string | null;
   gender?: Gender | null;
   profession?: string | null;
-  referingPhysician?: string | null;
+  referringPhysician?: string | null;
   medicalHistory?: string | null;
-  chirgicalHistory?: string | null;
+  surgicalHistory?: string | null;
   currentMedications?: string | null;
   activities?: string | null;
 }
@@ -48,9 +48,9 @@ export interface PatientFormData {
   postalCode: string;
   gender: Gender | '';
   profession: string;
-  referingPhysician: string;
+  referringPhysician: string;
   medicalHistory: string;
-  chirgicalHistory: string;
+  surgicalHistory: string;
   currentMedications: string;
   activities: string;
 }

@@ -17,7 +17,6 @@ interface ProtectedLinkProps extends Omit<React.AnchorHTMLAttributes<HTMLAnchorE
   children: React.ReactNode;
   isDirty: boolean;
   confirmMessage?: string;
-  _onClickInternal?: () => void; // Nouvelle prop
   disabled?: boolean; // Ajout de la propriété disabled
 }
 
@@ -27,7 +26,6 @@ const ProtectedLink: React.FC<ProtectedLinkProps> = ({
   isDirty,
   confirmMessage = 'Vous avez des modifications non enregistrées. Êtes-vous sûr de vouloir quitter ?',
   onClick,
-  _onClickInternal, // Récupérer la nouvelle prop
   disabled, // Récupérer la propriété disabled
   ...props
 }) => {
@@ -36,12 +34,10 @@ const ProtectedLink: React.FC<ProtectedLinkProps> = ({
       event.preventDefault(); // Empêche la navigation si le lien est désactivé
       return;
     }
-
-    let canNavigate = true;
+    
     if (isDirty) {
       if (!window.confirm(confirmMessage)) {
         event.preventDefault(); // Empêche la navigation
-        canNavigate = false;
       }
     }
 
@@ -49,14 +45,11 @@ const ProtectedLink: React.FC<ProtectedLinkProps> = ({
       onClick(event); // Appeler le onClick externe fourni
     }
 
-    if (canNavigate && _onClickInternal) {
-      _onClickInternal(); // Appeler le callback interne si la navigation n'est pas empêchée
-    }
     // Si event.preventDefault() a été appelé, Next.js Link ne naviguera pas.
   };
 
   return (
-    <Link href={href} onClick={handleClick} {...props} aria-disabled={disabled}>
+    <Link href={href} onClick={handleClick} {...props} aria-disabled={disabled} tabIndex={disabled ? -1 : undefined}>
       {children}
     </Link>
   );
