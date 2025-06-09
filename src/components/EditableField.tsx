@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import AutoResizeTextarea from './AutoResizeTextarea';
 
 // Icône de validation (coche verte)
@@ -34,11 +34,11 @@ interface EditableFieldProps {
   value: string | number | undefined | null;
   fieldName: string;
   entityId: string;
-  updateFunction: (entityId: string, fieldName: string, newValue: any) => Promise<void>;
+  updateFunction: (entityId: string, fieldName: string, newValue: string | number | boolean | null | undefined) => Promise<void>;
   inputType?: 'text' | 'textarea' | 'date' | 'email' | 'tel' | 'select' | 'number';
   placeholder?: string;
   options?: Array<{ value: string; label: string }>;
-  validationRules?: (value: any) => string | null;
+  validationRules?: (value: string | number | boolean | null | undefined) => string | null;
   className?: string;
   inputClassName?: string;
   displayClassName?: string;
@@ -127,9 +127,13 @@ const EditableField: React.FC<EditableFieldProps> = ({
       await updateFunction(entityId, fieldName, currentValue);
       setInitialValue(currentValue);
       setIsEditingField(false); // Déclenchera le useEffect pour onDirtyStateChange(fieldName, false)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(`Error updating field ${fieldName}:`, err);
-      setFieldError(err.message || 'Erreur de sauvegarde');
+      if (err instanceof Error) {
+        setFieldError(err.message || 'Erreur de sauvegarde');
+      } else {
+        setFieldError('Une erreur inconnue est survenue lors de la sauvegarde.');
+      }
       // En cas d'erreur, le champ reste "dirty" et en mode édition
       if (onDirtyStateChange) {
         onDirtyStateChange(fieldName, true);
@@ -164,13 +168,25 @@ const EditableField: React.FC<EditableFieldProps> = ({
   };
 
   const renderInputField = () => {
-    const inputElementProps: any = {
+    const inputElementProps: {
+      id: string;
+      name: string;
+      value: string | number; // `currentValue || ''` peut être une chaîne ou un nombre (qui sera converti en chaîne par le DOM)
+      onChange: React.ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>;
+      onBlur: React.FocusEventHandler<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>;
+      onKeyDown: React.KeyboardEventHandler<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>; // Assez général pour être compatible avec input, textarea, et select
+      className: string;
+      placeholder?: string;
+      'aria-invalid': boolean | undefined;
+      'aria-describedby': string | undefined;
+      autoFocus: boolean;
+    } = {
       id: fieldName,
       name: fieldName,
       value: currentValue || '',
       onChange: handleValueChange,
-      onBlur: handleBlur,
-      onKeyDown: handleKeyDown,
+      onBlur: handleBlur, // handleBlur est () => void, compatible avec FocusEventHandler
+      onKeyDown: handleKeyDown, // handleKeyDown est KeyboardEventHandler<Input|Textarea>, compatible si les propriétés utilisées de l'événement sont génériques
       className: `block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${fieldError ? 'border-red-500' : ''} ${inputClassName || ''} flex-grow`,
       placeholder: placeholder,
       'aria-invalid': !!fieldError,
