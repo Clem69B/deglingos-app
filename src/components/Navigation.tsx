@@ -1,9 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
+import ProtectedLink from './ProtectedLink';
+import { useDirtyForm } from '../contexts/DirtyFormContext';
 
 const navigation = [
   { name: 'Tableau de bord', href: '/', icon: HomeIcon },
@@ -103,6 +104,16 @@ export default function Navigation() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, signOut } = useAuthenticator((context) => [context.user]);
+  const { isPageDirty } = useDirtyForm(); // Obtenir l'état dirty global
+
+  const handleSignOut = () => {
+    if (isPageDirty) {
+      if (!window.confirm('Vous avez des modifications non enregistrées. Êtes-vous sûr de vouloir vous déconnecter ?')) {
+        return; // Empêche la déconnexion
+      }
+    }
+    signOut();
+  }
 
   return (
     <nav className="bg-white shadow">
@@ -111,9 +122,12 @@ export default function Navigation() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-12">
             <div className="flex-shrink-0">
-              <Link href="/" className="text-xl font-bold text-indigo-600">
+              <ProtectedLink href="/" 
+                className="text-xl font-bold text-indigo-600"
+                isDirty={isPageDirty}
+              >
                 Degling&apos;Os
-              </Link>
+              </ProtectedLink>
             </div>
             
             {/* User info and actions - Desktop */}
@@ -125,7 +139,7 @@ export default function Navigation() {
                     <span>{user?.signInDetails?.loginId || "Utilisateur"}</span>
                   </div>
                   <button
-                    onClick={signOut}
+                    onClick={handleSignOut}
                     className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                   >
                     <ArrowRightOnRectangleIcon className="w-4 h-4 mr-1" />
@@ -162,9 +176,10 @@ export default function Navigation() {
               const isActive = pathname === item.href || 
                 (item.href !== '/' && pathname.startsWith(item.href));
               return (
-                <Link
+                <ProtectedLink
                   key={item.name}
                   href={item.href}
+                  isDirty={isPageDirty}
                   className={classNames(
                     isActive
                       ? 'border-indigo-500 text-gray-900'
@@ -174,7 +189,7 @@ export default function Navigation() {
                 >
                   <item.icon className="w-4 h-4 mr-2" />
                   {item.name}
-                </Link>
+                </ProtectedLink>
               );
             })}
           </div>
@@ -189,22 +204,52 @@ export default function Navigation() {
               const isActive = pathname === item.href || 
                 (item.href !== '/' && pathname.startsWith(item.href));
               return (
-                <Link
+                <ProtectedLink
                   key={item.name}
                   href={item.href}
+                  isDirty={isPageDirty}
                   className={classNames(
                     isActive
                       ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
                       : 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700',
                     'block pl-3 pr-4 py-2 border-l-4 text-base font-medium'
                   )}
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => {
+                    // Si le lien n'est pas bloqué par la confirmation, fermer le menu mobile
+                    // ProtectedLink gère la confirmation, donc si onClick est appelé, la navigation est autorisée
+                    // ou l'utilisateur a confirmé.
+                    // Cependant, ProtectedLink ne retourne pas si la navigation a eu lieu.
+                    // Pour fermer le menu seulement si la navigation se produit, il faudrait une logique plus complexe
+                    // ou que ProtectedLink accepte un callback onNavigate.
+                    // Pour l'instant, on ferme le menu si isPageDirty est false, ou si l'utilisateur confirme.
+                    // Le handleClick de ProtectedLink s'exécute avant cet onClick.
+                    // Si la navigation est empêchée, cet onClick ne devrait pas fermer le menu si on le souhaite.
+                    // Une solution simple est de ne fermer que si la page n'est pas dirty.
+                    // Si elle est dirty, la confirmation de ProtectedLink s'affichera. Si l'utilisateur annule, le menu reste ouvert.
+                    // Si l'utilisateur confirme, la navigation se fait et le menu se ferme.
+                    if (!isPageDirty) {
+                         setMobileMenuOpen(false);
+                    }
+                    // Si isPageDirty est true, ProtectedLink gère la confirmation.
+                    // Si l'utilisateur confirme, la navigation se produit.
+                    // On peut aussi ajouter un then sur la navigation si ProtectedLink le permettait.
+                    // Pour l'instant, on peut supposer que si on arrive ici et que isPageDirty était true,
+                    // l'utilisateur a confirmé.
+                    // Alternative: ProtectedLink pourrait prendre un onNavigateSuccess callback.
+                    // Pour l'instant, on va fermer le menu. Si la navigation est bloquée, l'utilisateur rouvrira.
+                    // setMobileMenuOpen(false);
+                  }}
+                  // Pour une meilleure UX, le onClick de ProtectedLink devrait être prioritaire.
+                  // On va donc modifier ProtectedLink pour qu'il appelle un callback après confirmation.
+                  // Pour l'instant, on va juste fermer le menu, et si la navigation est bloquée, l'utilisateur le rouvrira.
+                  // setMobileMenuOpen(false);
+                  _onClickInternal={() => setMobileMenuOpen(false)} // On va ajouter cette prop à ProtectedLink
                 >
                   <div className="flex items-center">
                     <item.icon className="w-5 h-5 mr-3" />
                     {item.name}
                   </div>
-                </Link>
+                </ProtectedLink>
               );
             })}
           </div>
@@ -224,7 +269,7 @@ export default function Navigation() {
               </div>
               <div className="mt-3 px-2">
                 <button
-                  onClick={signOut}
+                  onClick={handleSignOut} // Utiliser le gestionnaire personnalisé
                   className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-50"
                 >
                   <div className="flex items-center">
