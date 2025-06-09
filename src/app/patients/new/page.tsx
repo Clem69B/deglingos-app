@@ -6,14 +6,17 @@ import type { Schema } from '../../../../amplify/data/resource';
 import type { CreatePatientInput, PatientFormData } from '../../../types/patient';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import AutoResizeTextarea from '../../../components/AutoResizeTextarea'; // Importer le nouveau composant
+import AutoResizeTextarea from '../../../components/AutoResizeTextarea';
+import ErrorAlert from '../../../components/ErrorAlert';
+import { useErrorHandler } from '../../../hooks/useErrorHandler';
 
 const client = generateClient<Schema>();
 
 export default function NewPatientPage() {
   const router = useRouter();
+  const { error, errorType, setError, clearError, handleAmplifyResponse } = useErrorHandler();
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState<PatientFormData>({
     firstName: '',
     lastName: '',
@@ -35,37 +38,43 @@ export default function NewPatientPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+    clearError();
+    // Clear field error when user starts typing
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
 
   const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
+    const newFieldErrors: Record<string, string> = {};
 
     if (!formData.firstName.trim()) {
-      newErrors.firstName = 'Le prénom est obligatoire';
+      newFieldErrors.firstName = 'Le prénom est obligatoire';
     }
     if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Le nom est obligatoire';
+      newFieldErrors.lastName = 'Le nom est obligatoire';
     }
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Veuillez saisir une adresse email valide';
+      newFieldErrors.email = 'Veuillez saisir une adresse email valide';
     }
     if (formData.phone && !/^[\d\s\-\+\(\)]+$/.test(formData.phone)) {
-      newErrors.phone = 'Veuillez saisir un numéro de téléphone valide';
+      newFieldErrors.phone = 'Veuillez saisir un numéro de téléphone valide';
     }
     if (formData.dateOfBirth && new Date(formData.dateOfBirth) > new Date()) {
-      newErrors.dateOfBirth = 'La date de naissance ne peut pas être dans le futur';
+      newFieldErrors.dateOfBirth = 'La date de naissance ne peut pas être dans le futur';
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setFieldErrors(newFieldErrors);
+    if (Object.keys(newFieldErrors).length > 0) {
+        setError("Veuillez corriger les erreurs dans le formulaire.", "warning");
+        return false;
+    }
+    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearError();
     
     if (!validateForm()) {
       return;
@@ -94,16 +103,19 @@ export default function NewPatientPage() {
       if (formData.activities.trim()) patientData.activities = formData.activities.trim();
 
       const response = await client.models.Patient.create(patientData);
+      const createdPatient = handleAmplifyResponse(response);
       
-      if (response.data) {
+      if (createdPatient) {
         router.push('/patients');
       } else {
-        console.error('Error creating patient:', response.errors);
-        setErrors({ general: 'Une erreur est survenue lors de la création du patient' });
+        // setError sera appelé par handleAmplifyResponse en cas d'erreur Amplify
+        // Si ce n'est pas une erreur Amplify mais que les données sont nulles, définissez une erreur générique.
+        if (!error) { 
+            setError('Une erreur est survenue lors de la création du patient. Réponse invalide.', 'error');
+        }
       }
-    } catch (error) {
-      console.error('Error creating patient:', error);
-      setErrors({ general: 'Une erreur est survenue lors de la création du patient' });
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Une erreur est survenue lors de la création du patient.'));
     } finally {
       setLoading(false);
     }
@@ -135,12 +147,14 @@ export default function NewPatientPage() {
       <form onSubmit={handleSubmit}>
         <div className="shadow sm:overflow-hidden sm:rounded-md">
           <div className="space-y-6 bg-white px-4 py-5 sm:p-6">
-            {/* General Error */}
-            {errors.general && (
-              <div className="bg-red-50 border border-red-200 rounded-md p-4">
-                <div className="text-sm text-red-600">{errors.general}</div>
-              </div>
-            )}
+            {/* General Error using ErrorAlert */}
+            <ErrorAlert
+              error={error}
+              type={errorType}
+              title="Notification"
+              onClose={clearError}
+              dismissible={true}
+            />
 
             {/* Personal Information Section */}
             <div>
@@ -164,12 +178,12 @@ export default function NewPatientPage() {
                         value={formData.firstName}
                         onChange={handleInputChange}
                         className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm ${
-                          errors.firstName ? 'border-red-300' : ''
+                          fieldErrors.firstName ? 'border-red-300' : ''
                         }`}
                         placeholder="Saisissez le prénom"
                       />
-                      {errors.firstName && (
-                        <p className="mt-2 text-sm text-red-600">{errors.firstName}</p>
+                      {fieldErrors.firstName && (
+                        <p className="mt-2 text-sm text-red-600">{fieldErrors.firstName}</p>
                       )}
                     </div>
 
@@ -184,12 +198,12 @@ export default function NewPatientPage() {
                         value={formData.lastName}
                         onChange={handleInputChange}
                         className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm ${
-                          errors.lastName ? 'border-red-300' : ''
+                          fieldErrors.lastName ? 'border-red-300' : ''
                         }`}
                         placeholder="Saisissez le nom"
                       />
-                      {errors.lastName && (
-                        <p className="mt-2 text-sm text-red-600">{errors.lastName}</p>
+                      {fieldErrors.lastName && (
+                        <p className="mt-2 text-sm text-red-600">{fieldErrors.lastName}</p>
                       )}
                     </div>
 
@@ -204,12 +218,12 @@ export default function NewPatientPage() {
                         value={formData.email}
                         onChange={handleInputChange}
                         className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm ${
-                          errors.email ? 'border-red-300' : ''
+                          fieldErrors.email ? 'border-red-300' : ''
                         }`}
                         placeholder="patient@exemple.com"
                       />
-                      {errors.email && (
-                        <p className="mt-2 text-sm text-red-600">{errors.email}</p>
+                      {fieldErrors.email && (
+                        <p className="mt-2 text-sm text-red-600">{fieldErrors.email}</p>
                       )}
                     </div>
 
@@ -224,12 +238,12 @@ export default function NewPatientPage() {
                         value={formData.phone}
                         onChange={handleInputChange}
                         className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm ${
-                          errors.phone ? 'border-red-300' : ''
+                          fieldErrors.phone ? 'border-red-300' : ''
                         }`}
                         placeholder="+33 1 23 45 67 89"
                       />
-                      {errors.phone && (
-                        <p className="mt-2 text-sm text-red-600">{errors.phone}</p>
+                      {fieldErrors.phone && (
+                        <p className="mt-2 text-sm text-red-600">{fieldErrors.phone}</p>
                       )}
                     </div>
 
@@ -244,11 +258,11 @@ export default function NewPatientPage() {
                         value={formData.dateOfBirth}
                         onChange={handleInputChange}
                         className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm ${
-                          errors.dateOfBirth ? 'border-red-300' : ''
+                          fieldErrors.dateOfBirth ? 'border-red-300' : ''
                         }`}
                       />
-                      {errors.dateOfBirth && (
-                        <p className="mt-2 text-sm text-red-600">{errors.dateOfBirth}</p>
+                      {fieldErrors.dateOfBirth && (
+                        <p className="mt-2 text-sm text-red-600">{fieldErrors.dateOfBirth}</p>
                       )}
                     </div>
 
