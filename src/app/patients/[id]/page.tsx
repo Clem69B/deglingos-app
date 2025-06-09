@@ -10,6 +10,8 @@ import EditableField from '../../../components/EditableField';
 import ProtectedLink from '../../../components/ProtectedLink';
 import Link from 'next/link';
 import { useDirtyForm } from '../../../contexts/DirtyFormContext';
+import ErrorAlert from '../../../components/ErrorAlert';
+import { useErrorHandler } from '../../../hooks/useErrorHandler';
 
 const client = generateClient<Schema>();
 const PATIENT_DETAIL_PAGE_DIRTY_SOURCE = 'patientDetailPage';
@@ -19,11 +21,12 @@ export default function PatientDetailPage() {
   const params = useParams();
   const patientId = params.id as string;
 
+  const { error, errorType, setError, clearError, handleAmplifyResponse } = useErrorHandler();
   const [patient, setPatient] = useState<PatientDetail | null>(null);
   const [consultations, setConsultations] = useState<ConsultationSummary[]>([]);
   const [unpaidInvoices, setUnpaidInvoices] = useState<InvoiceSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [generalError, setGeneralError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false); // État pour la suppression
 
   // Dirty state management
   const [dirtyFields, setDirtyFields] = useState<Set<string>>(new Set()); 
@@ -69,22 +72,24 @@ export default function PatientDetailPage() {
     const loadPatientData = async () => {
       try {
         setLoading(true);
-        setGeneralError(null);
+        clearError();
 
         const patientResponse = await client.models.Patient.get({ id: patientId });
-        if (!patientResponse.data) {
-          router.push('/patients');
+        const patientData = handleAmplifyResponse(patientResponse);
+        if (!patientData) {
+          setError("Patient non trouvé ou erreur lors de la récupération.", "error");
+          // Optionnel: router.push('/patients'); si l'erreur est critique
           return;
         }
-        const patientData = patientResponse.data as PatientDetail;
-        setPatient(patientData);
+        setPatient(patientData as PatientDetail);
 
         // Load consultations
         const consultationsResponse = await client.models.Consultation.list({
           filter: { patientId: { eq: patientId } },
         });
-        if (consultationsResponse.data) {
-          const sortedConsultations = consultationsResponse.data.sort(
+        const consultationsData = handleAmplifyResponse(consultationsResponse);
+        if (consultationsData) {
+          const sortedConsultations = consultationsData.sort(
             (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
           ) as ConsultationSummary[];
           setConsultations(sortedConsultations);
@@ -97,13 +102,14 @@ export default function PatientDetailPage() {
             status: { ne: 'PAID' }
           },
         });
-        if (invoicesResponse.data) {
-          setUnpaidInvoices(invoicesResponse.data as InvoiceSummary[]);
+        const unpaidInvoicesData = handleAmplifyResponse(invoicesResponse);
+        if (unpaidInvoicesData) {
+          setUnpaidInvoices(unpaidInvoicesData as InvoiceSummary[]);
         }
 
-      } catch (error) {
-        console.error('Error loading patient data:', error);
-        setGeneralError('Erreur lors du chargement des données du patient.');
+      } catch (err) {
+        console.error('Error loading patient data:', err);
+        setError(err instanceof Error ? err : new Error('Erreur lors du chargement des données du patient.'));
       } finally {
         setLoading(false);
       }
@@ -112,17 +118,17 @@ export default function PatientDetailPage() {
     if (patientId) {
       loadPatientData();
     }
-  }, [patientId, router]);
+  }, [patientId, router, clearError, handleAmplifyResponse, setError]);
 
   // handleInputChange, validateForm, handleSave, handleCancel sont supprimés
 
   const updatePatientField = async (entityId: string, fieldName: string, newValue: any) => {
     if (!patient) return;
+    clearError();
 
     const oldPatientData = { ...patient };
     // @ts-ignore
     setPatient(prev => prev ? { ...prev, [fieldName]: newValue } : null);
-    setGeneralError(null);
 
     try {
       const updateData: { id: string;[key: string]: any } = {
@@ -141,22 +147,102 @@ export default function PatientDetailPage() {
       updateData[fieldName] = processedValue;
 
       const response = await client.models.Patient.update(updateData);
+      const updatedPatient = handleAmplifyResponse(response);
 
-      if (response.errors || !response.data) {
-        console.error('Error updating patient field:', response.errors);
-        setPatient(oldPatientData);
-        const errorMessage = `Erreur lors de la mise à jour du champ '${fieldName}'.`;
-        setGeneralError(errorMessage);
-        throw new Error(errorMessage);
+      if (!updatedPatient) {
+        // handleAmplifyResponse aura déjà appelé setError en cas d'erreur Amplify
+        // Si ce n'est pas une erreur Amplify mais que les données sont nulles, définissez une erreur générique.
+        if (!error) { 
+             setError(`Erreur lors de la mise à jour du champ '${fieldName}'. Réponse invalide.`, 'error');
+        }
+        setPatient(oldPatientData); 
+        throw new Error(`Erreur lors de la mise à jour du champ '${fieldName}'.`); 
       }
-      setPatient(response.data as PatientDetail);
+      setPatient(updatedPatient as PatientDetail);
       // Après une sauvegarde réussie, le champ n'est plus dirty. EditableField s'en chargera via son useEffect.
-    } catch (error) {
-      console.error(`Error in updatePatientField for ${fieldName}:`, error);
+    } catch (err) {
+      console.error(`Error in updatePatientField for ${fieldName}:`, err);
       setPatient(oldPatientData);
-      const errorMessage = error instanceof Error ? error.message : `Une erreur est survenue lors de la mise à jour du champ '${fieldName}'.`;
-      setGeneralError(errorMessage);
-      throw new Error(errorMessage); // Rethrow pour que EditableField puisse le catcher
+      // setError est déjà appelé par handleAmplifyResponse ou dans le bloc try.
+      // Si ce n'est pas le cas, ou si c'est une autre erreur :
+      if (!(err instanceof Error && (err.message.includes("Amplify") || error))) { 
+          const errorMessage = err instanceof Error ? err.message : `Une erreur est survenue lors de la mise à jour du champ '${fieldName}'.`;
+          setError(errorMessage, 'error');
+      }
+      throw err; 
+    }
+  };
+
+  const handleDeletePatient = async () => {
+    if (!patient) return;
+
+    const confirmation = window.confirm(
+      `Êtes-vous sûr de vouloir supprimer ${patient.firstName} ${patient.lastName} ? Cette action supprimera également toutes les consultations et factures associées.`
+    );
+
+    if (!confirmation) {
+      return;
+    }
+
+    setIsDeleting(true);
+    clearError();
+
+    try {
+      // 1. Récupérer les consultations associées
+      const consultationsResponse = await client.models.Consultation.list({
+        filter: { patientId: { eq: patientId } },
+      });
+      const consultationsToDelete = handleAmplifyResponse(consultationsResponse);
+
+      if (consultationsToDelete) {
+        // 2. Supprimer les consultations
+        const deleteConsultationPromises = consultationsToDelete.map(c => client.models.Consultation.delete({ id: c.id }));
+        const deleteConsultationsResults = await Promise.allSettled(deleteConsultationPromises);
+        deleteConsultationsResults.forEach(result => {
+          if (result.status === 'rejected' || (result.status === 'fulfilled' && result.value.errors)) {
+            // handleAmplifyResponse gère les erreurs pour les opérations individuelles si nécessaire
+            // Pour l'instant, on loggue et on continue, ou on pourrait accumuler les erreurs
+            console.error("Erreur lors de la suppression d'une consultation:", result.status === 'rejected' ? result.reason : result.value.errors);
+            // On pourrait lancer une erreur ici pour arrêter le processus si une suppression échoue
+          }
+        });
+      }
+
+      // 3. Récupérer les factures associées
+      const invoicesResponse = await client.models.Invoice.list({
+        filter: { patientId: { eq: patientId } },
+      });
+      const invoicesToDelete = handleAmplifyResponse(invoicesResponse);
+
+      if (invoicesToDelete) {
+        // 4. Supprimer les factures
+        const deleteInvoicePromises = invoicesToDelete.map(i => client.models.Invoice.delete({ id: i.id }));
+        const deleteInvoicesResults = await Promise.allSettled(deleteInvoicePromises);
+        deleteInvoicesResults.forEach(result => {
+          if (result.status === 'rejected' || (result.status === 'fulfilled' && result.value.errors)) {
+            console.error("Erreur lors de la suppression d'une facture:", result.status === 'rejected' ? result.reason : result.value.errors);
+          }
+        });
+      }
+
+      // 5. Supprimer le patient
+      const deletePatientResponse = await client.models.Patient.delete({ id: patientId });
+      if (!handleAmplifyResponse(deletePatientResponse)) {
+        // L'erreur est déjà définie par handleAmplifyResponse
+        throw new Error("Échec de la suppression du patient.");
+      }
+
+      // Redirection après succès
+      router.push('/patients?deleted=true'); // Vous pouvez gérer ce paramètre sur la page des patients pour un message
+    } catch (err) {
+      console.error('Erreur lors de la suppression du patient et de ses données associées:', err);
+      // setError est appelé par handleAmplifyResponse ou ici si ce n'est pas une erreur Amplify
+      if (!(err instanceof Error && (err.message.includes("Amplify") || error))) {
+        const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue lors de la suppression.';
+        setError(errorMessage, 'error');
+      }
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -265,31 +351,43 @@ export default function PatientDetailPage() {
           <ProtectedLink
             href="/patients"
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-            isDirty={isPageDirty} // Utiliser l'état global du contexte
+            isDirty={isPageDirty || isDeleting} // Utiliser l'état global du contexte et désactiver si suppression en cours
+            disabled={isDeleting}
           >
             Retour
           </ProtectedLink>
+          <button
+            type="button"
+            onClick={handleDeletePatient}
+            disabled={isDeleting || isPageDirty}
+            className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white 
+                        ${isDeleting || isPageDirty ? 'bg-red-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500'}`}
+          >
+            {isDeleting ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Suppression...
+              </>
+            ) : (
+              'Supprimer Patient'
+            )}
+          </button>
           {/* Les boutons Modifier/Annuler/Enregistrer globaux sont supprimés */}
         </div>
       </div>
 
-
-
-      {/* General Error Message */}
-      {generalError && (
-        <div className="bg-red-50 border-l-4 border-red-400 p-4 mt-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v4a1 1 0 102 0V7zm-1 7a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-red-700">{generalError}</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Affichage des erreurs global */}
+      <ErrorAlert
+        error={error}
+        type={errorType}
+        title="Notification"
+        onClose={clearError}
+        dismissible={true}
+        className="my-4"
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
