@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import Navigation from '../components/Navigation';
+import { DirtyFormProvider } from '../contexts/DirtyFormContext'; // Ajustez le chemin si nécessaire
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -20,12 +21,14 @@ export default function RootLayout({
     <html lang="fr">
       <body className={inter.className}>
         <Providers>
-          <Navigation />
-          <main className="min-h-screen bg-gray-50">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-              {children}
-            </div>
-          </main>
+          <DirtyFormProvider>
+            <Navigation />
+            <main className="min-h-screen bg-gray-50">
+              <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+                {children}
+              </div>
+            </main>
+          </DirtyFormProvider>
         </Providers>
       </body>
     </html>
