@@ -6,6 +6,7 @@ import type { Schema } from '../../../../amplify/data/resource';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { CreateConsultationInput, PatientListItem } from '../../../types';
+import AutoResizeTextarea from '../../../components/AutoResizeTextarea';
 
 const client = generateClient<Schema>();
 
@@ -72,6 +73,7 @@ export default function NewConsultationPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -183,52 +185,19 @@ export default function NewConsultationPage() {
                   </select>
                 </div>
 
-                {/* Date */}
-                <div className="col-span-6 sm:col-span-3">
-                  <label htmlFor="date" className="block text-sm font-medium text-gray-700">
-                    Date *
+                {/* Notes */}
+                <div className="col-span-6">
+                  <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+                    Notes
                   </label>
-                  <input
-                    type="date"
-                    id="date"
-                    name="date"
-                    required
-                    value={formData.date}
+                  <AutoResizeTextarea
+                    id="notes"
+                    name="notes"
+                    rows={2}
+                    value={formData.notes}
                     onChange={handleInputChange}
-                    className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                  />
-                </div>
-
-                {/* Heure */}
-                <div className="col-span-6 sm:col-span-3">
-                  <label htmlFor="time" className="block text-sm font-medium text-gray-700">
-                    Heure *
-                  </label>
-                  <input
-                    type="time"
-                    id="time"
-                    name="time"
-                    required
-                    value={formData.time}
-                    onChange={handleInputChange}
-                    className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                  />
-                </div>
-
-                {/* Durée */}
-                <div className="col-span-6 sm:col-span-3">
-                  <label htmlFor="duration" className="block text-sm font-medium text-gray-700">
-                    Durée (minutes)
-                  </label>
-                  <input
-                    type="number"
-                    id="duration"
-                    name="duration"
-                    min="15"
-                    max="180"
-                    value={formData.duration}
-                    onChange={handleInputChange}
-                    className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                    placeholder="Notes personnelles, observations..."
+                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"
                   />
                 </div>
 
@@ -271,7 +240,7 @@ export default function NewConsultationPage() {
                   <label htmlFor="anamnesisSkullCervical" className="block text-sm font-medium text-gray-700">
                     Crâne & Cervicale
                   </label>
-                  <textarea
+                  <AutoResizeTextarea
                     id="anamnesisSkullCervical"
                     name="anamnesisSkullCervical"
                     rows={3}
@@ -287,7 +256,7 @@ export default function NewConsultationPage() {
                   <label htmlFor="anamnesisDigestive" className="block text-sm font-medium text-gray-700">
                     Système digestif
                   </label>
-                  <textarea
+                  <AutoResizeTextarea
                     id="anamnesisDigestive"
                     name="anamnesisDigestive"
                     rows={3}
@@ -303,7 +272,7 @@ export default function NewConsultationPage() {
                   <label htmlFor="anamnesisCardioThoracic" className="block text-sm font-medium text-gray-700">
                     Cardio-thoracique
                   </label>
-                  <textarea
+                  <AutoResizeTextarea
                     id="anamnesisCardioThoracic"
                     name="anamnesisCardioThoracic"
                     rows={3}
@@ -319,7 +288,7 @@ export default function NewConsultationPage() {
                   <label htmlFor="anamnesisGynecological" className="block text-sm font-medium text-gray-700">
                     Gynécologique
                   </label>
-                  <textarea
+                  <AutoResizeTextarea
                     id="anamnesisGynecological"
                     name="anamnesisGynecological"
                     rows={3}
@@ -335,7 +304,7 @@ export default function NewConsultationPage() {
                   <label htmlFor="anamnesisSleep" className="block text-sm font-medium text-gray-700">
                     Sommeil
                   </label>
-                  <textarea
+                  <AutoResizeTextarea
                     id="anamnesisSleep"
                     name="anamnesisSleep"
                     rows={3}
@@ -351,7 +320,7 @@ export default function NewConsultationPage() {
                   <label htmlFor="anamnesisPsychological" className="block text-sm font-medium text-gray-700">
                     Psychologique & Émotionnel
                   </label>
-                  <textarea
+                  <AutoResizeTextarea
                     id="anamnesisPsychological"
                     name="anamnesisPsychological"
                     rows={3}
@@ -384,7 +353,7 @@ export default function NewConsultationPage() {
                   <label htmlFor="treatment" className="block text-sm font-medium text-gray-700">
                     Traitement
                   </label>
-                  <textarea
+                  <AutoResizeTextarea
                     id="treatment"
                     name="treatment"
                     rows={3}
@@ -400,7 +369,7 @@ export default function NewConsultationPage() {
                   <label htmlFor="recommendations" className="block text-sm font-medium text-gray-700">
                     Recommandations
                   </label>
-                  <textarea
+                  <AutoResizeTextarea
                     id="recommendations"
                     name="recommendations"
                     rows={3}
@@ -441,20 +410,70 @@ export default function NewConsultationPage() {
                     />
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-                {/* Notes */}
-                <div>
-                  <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
-                    Notes privées
+        {/* Planification */}
+        <div className="bg-white shadow px-4 py-5 sm:rounded-lg sm:p-6">
+          <div className="md:grid md:grid-cols-3 md:gap-6">
+            <div className="md:col-span-1">
+              <h3 className="text-lg font-medium leading-6 text-gray-900">
+                Planification
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Date, heure et durée de la consultation
+              </p>
+            </div>
+            <div className="mt-5 md:mt-0 md:col-span-2">
+              <div className="grid grid-cols-6 gap-6">
+                {/* Date */}
+                <div className="col-span-6 sm:col-span-2">
+                  <label htmlFor="date" className="block text-sm font-medium text-gray-700">
+                    Date *
                   </label>
-                  <textarea
-                    id="notes"
-                    name="notes"
-                    rows={2}
-                    value={formData.notes}
+                  <input
+                    type="date"
+                    id="date"
+                    name="date"
+                    required
+                    value={formData.date}
                     onChange={handleInputChange}
-                    placeholder="Notes personnelles, observations..."
-                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"
+                    className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                  />
+                </div>
+
+                {/* Heure */}
+                <div className="col-span-6 sm:col-span-2">
+                  <label htmlFor="time" className="block text-sm font-medium text-gray-700">
+                    Heure *
+                  </label>
+                  <input
+                    type="time"
+                    id="time"
+                    name="time"
+                    required
+                    value={formData.time}
+                    onChange={handleInputChange}
+                    className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                  />
+                </div>
+
+                {/* Durée */}
+                <div className="col-span-6 sm:col-span-2">
+                  <label htmlFor="duration" className="block text-sm font-medium text-gray-700">
+                    Durée (minutes)
+                  </label>
+                  <input
+                    type="number"
+                    id="duration"
+                    name="duration"
+                    min="15"
+                    max="180"
+                    value={formData.duration}
+                    onChange={handleInputChange}
+                    className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
                   />
                 </div>
               </div>

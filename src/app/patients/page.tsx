@@ -1,65 +1,65 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { generateClient } from 'aws-amplify/data';
+import { generateClient, SelectionSet } from 'aws-amplify/data';
 import type { Schema } from '../../../amplify/data/resource';
 import Link from 'next/link';
-import type { PatientListItem } from '../../types';
+import ErrorAlert from '../../components/ErrorAlert';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 const client = generateClient<Schema>();
 
-export default function PatientsPage() {
-  const [patients, setPatients] = useState<PatientListItem[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [filteredPatients, setFilteredPatients] = useState<PatientListItem[]>([]);
+const selectionSet = ['id', 'firstName', 'lastName', 'email', 'phone', 'updatedAt'] as const;
+type PatientListItem = SelectionSet<Schema['Patient']['type'], typeof selectionSet>;
 
+export default function Page() {
+  const { error, errorType, setError, clearError, handleAmplifyResponse } = useErrorHandler();
+  const [isLoading, setIsLoading] = useState(true);
+  const [patients, setPatients] = useState<PatientListItem[]>([]);
+  const [searchLastName, setSearchLastName] = useState('');
+
+  const fetchPatients = async () => {
+    try {
+      const normalizedSearch = searchLastName.trim().charAt(0).toUpperCase() + searchLastName.trim().slice(1).toLowerCase();
+      const response = await client.models.Patient.list({
+        filter: {
+          or: [
+            { lastName: { contains: searchLastName } },
+            { lastName: { contains: normalizedSearch } },
+          ],
+        },
+        selectionSet: selectionSet,
+        limit: 20,
+      });
+      
+      const data = handleAmplifyResponse(response);
+      if (data) {
+        setPatients(data);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Erreur lors du chargement des patients'));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // Chargement initial des patients au montage du composant
   useEffect(() => {
     fetchPatients();
   }, []);
 
-  useEffect(() => {
-    // Filtrer les patients en fonction du terme de recherche
-    const filtered = patients.filter(patient =>
-      patient.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.phone?.includes(searchTerm)
-    );
-    setFilteredPatients(filtered);
-  }, [patients, searchTerm]);
-
-  const fetchPatients = async () => {
-    try {
-      setLoading(true);
-      const response = await client.models.Patient.list({
-        selectionSet: ["id", "firstName", "lastName", "email", "phone", "dateOfBirth", "createdAt"]
-      });
-      
-      // Filtrer et transformer les données pour correspondre au type PatientListItem
-      const fetchedPatients: PatientListItem[] = (response.data || [])
-        .filter(p => p.id) // Filtrer les patients avec un id valide
-        .map(p => ({
-          id: p.id!,
-          firstName: p.firstName || null,
-          lastName: p.lastName || null,
-          email: p.email || null,
-          phone: p.phone || null,
-          dateOfBirth: p.dateOfBirth || null,
-          createdAt: p.createdAt!,
-        }));
-      
-      setPatients(fetchedPatients);
-    } catch (error) {
-      console.error('Erreur lors du chargement des patients:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
-      {/* En-tête */}
+      {/* Affichage des erreurs */}
+      <ErrorAlert 
+        error={error}
+        type={errorType}
+        title="Erreur de chargement"
+        onClose={clearError}
+        autoClose={false}
+      />
+
+      {/* Header */}
       <div className="md:flex md:items-center md:justify-between">
         <div className="flex-1 min-w-0">
           <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
@@ -79,117 +79,99 @@ export default function PatientsPage() {
         </div>
       </div>
 
-      {/* Barre de recherche */}
+      {/* Research */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <div className="max-w-lg">
             <label htmlFor="search" className="block text-sm font-medium text-gray-700">
               Rechercher un patient
             </label>
-            <div className="mt-1 relative rounded-md shadow-sm">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg
-                  className="h-5 w-5 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-              </div>
+            <form
+              className="p-4 flex gap-2 items-center"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setIsLoading(true);
+                await fetchPatients();
+                setIsLoading(false);
+              }}
+            >
               <input
                 type="text"
-                id="search"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
-                placeholder="Nom, prénom, email ou téléphone..."
+                placeholder="Rechercher par nom de famille"
+                className="pl-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-indigo-300 rounded-md shadow-sm"
+                value={searchLastName}
+                onChange={(e) => setSearchLastName(e.target.value)}
               />
-            </div>
+              <button
+                type="submit"
+                className="bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700 active:bg-indigo-800 "
+                disabled={isLoading}
+              >
+                Rechercher
+              </button>
+            </form>
           </div>
         </div>
       </div>
 
-      {/* Liste des patients */}
+      {/* Patient List */}
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        {loading ? (
-          <div className="px-4 py-12 text-center">
-            <div className="text-sm text-gray-500">Chargement des patients...</div>
-          </div>
-        ) : filteredPatients.length === 0 ? (
-          <div className="px-4 py-12 text-center">
-            <div className="text-sm text-gray-500">
-              {searchTerm ? 'Aucun patient trouvé pour cette recherche' : 'Aucun patient enregistré'}
-            </div>
-          </div>
-        ) : (
-          <ul className="divide-y divide-gray-200">
-            {filteredPatients.map((patient) => (
-              <li key={patient.id}>
-                <Link
-                  href={`/patients/${patient.id}`}
-                  className="block hover:bg-gray-50 px-4 py-4 sm:px-6"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <div className="h-10 w-10 rounded-full bg-indigo-500 flex items-center justify-center">
-                          <span className="text-sm font-medium text-white">
-                            {patient.firstName?.[0]}{patient.lastName?.[0]}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {patient.firstName} {patient.lastName}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {patient.email}
-                        </div>
-                        {patient.phone && (
-                          <div className="text-sm text-gray-500">
-                            {patient.phone}
-                          </div>
-                        )}
+        <ul className="divide-y divide-gray-200">
+          {patients.map((patient) => (
+            <li key={patient.id}>
+              <Link
+                href={`/patients/${patient.id}`}
+                className="block hover:bg-gray-50 px-4 py-4 sm:px-6"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <div className="h-10 w-10 rounded-full bg-indigo-500 flex items-center justify-center">
+                        <span className="text-sm font-medium text-white">
+                          {patient.firstName?.[0]}{patient.lastName?.[0]}
+                        </span>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end text-sm text-gray-500">
-                      {patient.dateOfBirth && (
-                        <div>
-                          Né(e) le {new Date(patient.dateOfBirth).toLocaleDateString('fr-FR')}
-                        </div>
-                      )}
-                      {patient.createdAt && (
-                        <div className="mt-1">
-                          Créé le {new Date(patient.createdAt).toLocaleDateString('fr-FR')}
+                    <div className="ml-4">
+                      <div className="text-sm font-medium text-gray-900">
+                        {patient.firstName} {patient.lastName}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {patient.email}
+                      </div>
+                      {patient.phone && (
+                        <div className="text-sm text-gray-500">
+                          {patient.phone}
                         </div>
                       )}
                     </div>
                   </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+                  <div className="flex flex-col items-end text-sm text-gray-500">
+                    {patient.updatedAt && (
+                      <div>
+                        Mis à jour le {new Date(patient.updatedAt).toLocaleDateString('fr-FR')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </div>
 
       {/* Statistiques */}
-      {!loading && (
+      {!isLoading && (
         <div className="bg-white shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
             <div className="text-sm text-gray-500">
-              {searchTerm ? (
+              {searchLastName ? (
                 <>
-                  {filteredPatients.length} patient(s) trouvé(s) sur {patients.length} total
+                  {patients.length} patient(s) trouvé(s) 
                 </>
               ) : (
                 <>
-                  {patients.length} patient(s) enregistré(s)
+                  {patients.length} patient(s) chargé(s)
                 </>
               )}
             </div>
