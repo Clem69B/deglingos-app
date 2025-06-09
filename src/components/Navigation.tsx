@@ -214,36 +214,6 @@ export default function Navigation() {
                       : 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700',
                     'block pl-3 pr-4 py-2 border-l-4 text-base font-medium'
                   )}
-                  onClick={() => {
-                    // Si le lien n'est pas bloqué par la confirmation, fermer le menu mobile
-                    // ProtectedLink gère la confirmation, donc si onClick est appelé, la navigation est autorisée
-                    // ou l'utilisateur a confirmé.
-                    // Cependant, ProtectedLink ne retourne pas si la navigation a eu lieu.
-                    // Pour fermer le menu seulement si la navigation se produit, il faudrait une logique plus complexe
-                    // ou que ProtectedLink accepte un callback onNavigate.
-                    // Pour l'instant, on ferme le menu si isPageDirty est false, ou si l'utilisateur confirme.
-                    // Le handleClick de ProtectedLink s'exécute avant cet onClick.
-                    // Si la navigation est empêchée, cet onClick ne devrait pas fermer le menu si on le souhaite.
-                    // Une solution simple est de ne fermer que si la page n'est pas dirty.
-                    // Si elle est dirty, la confirmation de ProtectedLink s'affichera. Si l'utilisateur annule, le menu reste ouvert.
-                    // Si l'utilisateur confirme, la navigation se fait et le menu se ferme.
-                    if (!isPageDirty) {
-                         setMobileMenuOpen(false);
-                    }
-                    // Si isPageDirty est true, ProtectedLink gère la confirmation.
-                    // Si l'utilisateur confirme, la navigation se produit.
-                    // On peut aussi ajouter un then sur la navigation si ProtectedLink le permettait.
-                    // Pour l'instant, on peut supposer que si on arrive ici et que isPageDirty était true,
-                    // l'utilisateur a confirmé.
-                    // Alternative: ProtectedLink pourrait prendre un onNavigateSuccess callback.
-                    // Pour l'instant, on va fermer le menu. Si la navigation est bloquée, l'utilisateur rouvrira.
-                    // setMobileMenuOpen(false);
-                  }}
-                  // Pour une meilleure UX, le onClick de ProtectedLink devrait être prioritaire.
-                  // On va donc modifier ProtectedLink pour qu'il appelle un callback après confirmation.
-                  // Pour l'instant, on va juste fermer le menu, et si la navigation est bloquée, l'utilisateur le rouvrira.
-                  // setMobileMenuOpen(false);
-                  _onClickInternal={() => setMobileMenuOpen(false)} // On va ajouter cette prop à ProtectedLink
                 >
                   <div className="flex items-center">
                     <item.icon className="w-5 h-5 mr-3" />

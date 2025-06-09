@@ -29,7 +29,6 @@ export default function PatientDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false); // État pour la suppression
 
   // Dirty state management
-  const [dirtyFields, setDirtyFields] = useState<Set<string>>(new Set()); 
   const { isPageDirty, addDirtySource, removeDirtySource } = useDirtyForm(); // Récupérer isPageDirty
 
 
@@ -122,16 +121,15 @@ export default function PatientDetailPage() {
 
   // handleInputChange, validateForm, handleSave, handleCancel sont supprimés
 
-  const updatePatientField = async (entityId: string, fieldName: string, newValue: any) => {
+  const updatePatientField = async (entityId: string, fieldName: string, newValue: string | number | boolean | null | undefined) => {
     if (!patient) return;
     clearError();
 
     const oldPatientData = { ...patient };
-    // @ts-ignore
     setPatient(prev => prev ? { ...prev, [fieldName]: newValue } : null);
 
     try {
-      const updateData: { id: string;[key: string]: any } = {
+      const updateData: { id: string;[key: string]: string | number | boolean | null | undefined } = {
         id: entityId,
       };
 
@@ -140,7 +138,7 @@ export default function PatientDetailPage() {
         processedValue = newValue.trim();
       }
       // Pour les champs optionnels, si la valeur après trim est vide, la mettre à null
-      if (processedValue === '' && ['email', 'phone', 'dateOfBirth', 'address', 'city', 'postalCode', 'gender', 'profession', 'referingPhysician', 'medicalHistory', 'chirgicalHistory', 'currentMedications', 'activities'].includes(fieldName)) {
+      if (processedValue === '' && ['email', 'phone', 'dateOfBirth', 'address', 'city', 'postalCode', 'gender', 'profession', 'referringPhysician', 'medicalHistory', 'surgicalHistory', 'currentMedications', 'activities'].includes(fieldName)) {
         processedValue = null;
       }
 
@@ -520,8 +518,8 @@ export default function PatientDetailPage() {
             <div className="space-y-6">
               <EditableField
                 label="Médecin traitant"
-                fieldName="referingPhysician"
-                value={patient.referingPhysician}
+                fieldName="referringPhysician"
+                value={patient.referringPhysician}
                 entityId={patientId}
                 updateFunction={updatePatientField}
                 placeholder="Dr. Nom Prénom"
@@ -539,8 +537,8 @@ export default function PatientDetailPage() {
               />
               <EditableField
                 label="Antécédents chirurgicaux"
-                fieldName="chirgicalHistory"
-                value={patient.chirgicalHistory}
+                fieldName="surgicalHistory"
+                value={patient.surgicalHistory}
                 entityId={patientId}
                 updateFunction={updatePatientField}
                 inputType="textarea"

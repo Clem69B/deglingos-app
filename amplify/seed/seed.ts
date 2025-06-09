@@ -63,9 +63,9 @@ for (let i = 0; i < 10; i++) {
       postalCode: String(Math.floor(Math.random() * 90000) + 10000), // Random 5-digit postal code
       gender: ['M', 'F', 'OTHER'][Math.floor(Math.random() * 3)] as 'M' | 'F' | 'OTHER',
       profession: ['Engineer', 'Doctor', 'Teacher', 'Artist', 'Chef', 'Developer', 'Musician', 'Writer', 'Scientist', 'Accountant', 'Lawyer', 'Nurse'][Math.floor(Math.random() * 12)],
-      referingPhysician: `Contact ${['Smith', 'Jones', 'Williams'][Math.floor(Math.random() * 3)]} +1-555-${String(Math.floor(Math.random() * 10000000)).padStart(7, '0')}`,
+      referringPhysician: `Contact ${['Smith', 'Jones', 'Williams'][Math.floor(Math.random() * 3)]} +1-555-${String(Math.floor(Math.random() * 10000000)).padStart(7, '0')}`,
       medicalHistory: `Sample medical history: ${['None', 'Asthma', 'Hypertension', 'Diabetes Type 2'][Math.floor(Math.random() * 4)]}. Additional notes: ${Math.random().toString(36).substring(2, 10)}.`,
-      chirgicalHistory: `Surgical history: ${['Appendectomy', 'Gallbladder removal', 'Knee surgery', 'None'][Math.floor(Math.random() * 4)]}. Details: ${Math.random().toString(36).substring(2, 10)}.`,
+      surgicalHistory: `Surgical history: ${['Appendectomy', 'Gallbladder removal', 'Knee surgery', 'None'][Math.floor(Math.random() * 4)]}. Details: ${Math.random().toString(36).substring(2, 10)}.`,
       activities: `Physical activities: ${['Running', 'Swimming', 'Cycling', 'Yoga', 'None'][Math.floor(Math.random() * 5)]}. Frequency: ${Math.floor(Math.random() * 7) + 1} times a week.`,
       currentMedications: `Current medications: ${['None', 'Lisinopril', 'Metformin', 'Amoxicillin', 'Ibuprofen'][Math.floor(Math.random() * 5)]}. Dosage: ${Math.random().toString(36).substring(2, 8)}.`,
       createdAt: new Date().toISOString(),

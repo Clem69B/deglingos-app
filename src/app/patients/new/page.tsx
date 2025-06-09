@@ -28,9 +28,9 @@ export default function NewPatientPage() {
     postalCode: '',
     gender: '',
     profession: '',
-    referingPhysician: '',
+    referringPhysician: '',
     medicalHistory: '',
-    chirgicalHistory: '',
+    surgicalHistory: '',
     currentMedications: '',
     activities: '',
   });
@@ -96,9 +96,9 @@ export default function NewPatientPage() {
       if (formData.postalCode.trim()) patientData.postalCode = formData.postalCode.trim();
       if (formData.gender) patientData.gender = formData.gender;
       if (formData.profession.trim()) patientData.profession = formData.profession.trim();
-      if (formData.referingPhysician.trim()) patientData.referingPhysician = formData.referingPhysician.trim();
+      if (formData.referringPhysician.trim()) patientData.referringPhysician = formData.referringPhysician.trim();
       if (formData.medicalHistory.trim()) patientData.medicalHistory = formData.medicalHistory.trim();
-      if (formData.chirgicalHistory.trim()) patientData.chirgicalHistory = formData.chirgicalHistory.trim();
+      if (formData.surgicalHistory.trim()) patientData.surgicalHistory = formData.surgicalHistory.trim();
       if (formData.currentMedications.trim()) patientData.currentMedications = formData.currentMedications.trim();
       if (formData.activities.trim()) patientData.activities = formData.activities.trim();
 
@@ -387,14 +387,14 @@ export default function NewPatientPage() {
                 <div className="mt-5 md:col-span-2 md:mt-0">
                   <div className="grid grid-cols-6 gap-6">
                     <div className="col-span-6 sm:col-span-3">
-                      <label htmlFor="referingPhysician" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="referringPhysician" className="block text-sm font-medium text-gray-700">
                         Médecin traitant
                       </label>
                       <input
                         type="text"
-                        id="referingPhysician"
-                        name="referingPhysician"
-                        value={formData.referingPhysician}
+                        id="referringPhysician"
+                        name="referringPhysician"
+                        value={formData.referringPhysician}
                         onChange={handleInputChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                         placeholder="Dr. Nom du médecin traitant"
@@ -417,14 +417,14 @@ export default function NewPatientPage() {
                     </div>
 
                     <div className="col-span-6">
-                      <label htmlFor="chirgicalHistory" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="surgicalHistory" className="block text-sm font-medium text-gray-700">
                         Antécédents chirurgicaux
                       </label>
                       <AutoResizeTextarea
-                        id="chirgicalHistory"
-                        name="chirgicalHistory"
+                        id="surgicalHistory"
+                        name="surgicalHistory"
                         rows={3}
-                        value={formData.chirgicalHistory}
+                        value={formData.surgicalHistory}
                         onChange={handleInputChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                         placeholder="Opérations, interventions chirurgicales, etc."
