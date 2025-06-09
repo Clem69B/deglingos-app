@@ -7,11 +7,14 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { CreateConsultationInput, PatientListItem } from '../../../types';
 import AutoResizeTextarea from '../../../components/AutoResizeTextarea';
+import ErrorAlert from '../../../components/ErrorAlert'; // Ajouté
+import { useErrorHandler } from '../../../hooks/useErrorHandler'; // Ajouté
 
 const client = generateClient<Schema>();
 
 export default function NewConsultationPage() {
   const router = useRouter();
+  const { error, errorType, setError, clearError, handleAmplifyResponse } = useErrorHandler(); // Ajouté
   const [patients, setPatients] = useState<PatientListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -52,28 +55,30 @@ export default function NewConsultationPage() {
         selectionSet: ['id', 'firstName', 'lastName', 'email', 'createdAt']
       });
       
-      // Filtrer et transformer les données pour correspondre au type PatientListItem
-      const validPatients = (response.data || [])
-        .filter(patient => patient.id) // Filtrer les patients avec un id valide
-        .map(patient => ({
-          id: patient.id!,
-          firstName: patient.firstName || null,
-          lastName: patient.lastName || null,
-          email: patient.email || null,
-          phone: null, // Non récupéré dans cette requête
-          dateOfBirth: null, // Non récupéré dans cette requête
-          createdAt: patient.createdAt!
-        }));
-      
-      setPatients(validPatients);
-    } catch (error) {
-      console.error('Erreur lors du chargement des patients:', error);
+      const validPatientsData = handleAmplifyResponse(response); // Modifié
+
+      if (validPatientsData) {
+        const validPatients = validPatientsData
+          .filter(patient => patient.id) 
+          .map(patient => ({
+            id: patient.id!,
+            firstName: patient.firstName || null,
+            lastName: patient.lastName || null,
+            email: patient.email || null,
+            phone: null, 
+            dateOfBirth: null, 
+            createdAt: patient.createdAt!
+          }));
+        setPatients(validPatients);
+      }
+    } catch (err) { // Modifié
+      setError(err instanceof Error ? err : new Error('Erreur lors du chargement des patients'));
     }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-
+    clearError(); // Ajouté pour effacer l'erreur en cas de modification
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -82,9 +87,10 @@ export default function NewConsultationPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    clearError(); // Ajouté
+
     if (!formData.patientId || !formData.date || !formData.time || !formData.reason) {
-      alert('Veuillez remplir les champs obligatoires');
+      setError('Veuillez remplir les champs obligatoires: Patient, Date, Heure, Motif.', 'warning'); // Modifié
       return;
     }
 
@@ -115,12 +121,12 @@ export default function NewConsultationPage() {
         nextAppointment: nextAppointmentDateTime
       };
 
-      await client.models.Consultation.create(consultationData);
+      const response = await client.models.Consultation.create(consultationData); // Modifié
+      handleAmplifyResponse(response); // Modifié
       
       router.push('/consultations');
-    } catch (error) {
-      console.error('Erreur lors de la création de la consultation:', error);
-      alert('Erreur lors de la création de la consultation');
+    } catch (err) { // Modifié
+      setError(err instanceof Error ? err : new Error('Erreur lors de la création de la consultation'));
     } finally {
       setLoading(false);
     }
@@ -147,6 +153,17 @@ export default function NewConsultationPage() {
           </Link>
         </div>
       </div>
+
+      {/* Affichage des erreurs */}
+      <ErrorAlert
+        error={error}
+        type={errorType}
+        title="Notification"
+        onClose={clearError}
+        dismissible={true}
+        autoClose={errorType !== 'error'}
+        autoCloseDelay={5000}
+      />
 
       {/* Formulaire */}
       <form onSubmit={handleSubmit} className="space-y-6">

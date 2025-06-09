@@ -18,6 +18,7 @@ interface ProtectedLinkProps extends Omit<React.AnchorHTMLAttributes<HTMLAnchorE
   isDirty: boolean;
   confirmMessage?: string;
   _onClickInternal?: () => void; // Nouvelle prop
+  disabled?: boolean; // Ajout de la propriété disabled
 }
 
 const ProtectedLink: React.FC<ProtectedLinkProps> = ({
@@ -27,9 +28,15 @@ const ProtectedLink: React.FC<ProtectedLinkProps> = ({
   confirmMessage = 'Vous avez des modifications non enregistrées. Êtes-vous sûr de vouloir quitter ?',
   onClick,
   _onClickInternal, // Récupérer la nouvelle prop
+  disabled, // Récupérer la propriété disabled
   ...props
 }) => {
   const handleClick: MouseEventHandler<HTMLAnchorElement> = (event) => {
+    if (disabled) {
+      event.preventDefault(); // Empêche la navigation si le lien est désactivé
+      return;
+    }
+
     let canNavigate = true;
     if (isDirty) {
       if (!window.confirm(confirmMessage)) {
@@ -49,7 +56,7 @@ const ProtectedLink: React.FC<ProtectedLinkProps> = ({
   };
 
   return (
-    <Link href={href} onClick={handleClick} {...props}>
+    <Link href={href} onClick={handleClick} {...props} aria-disabled={disabled}>
       {children}
     </Link>
   );
