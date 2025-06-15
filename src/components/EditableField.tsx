@@ -35,7 +35,7 @@ interface EditableFieldProps {
   fieldName: string;
   entityId: string;
   updateFunction: (entityId: string, fieldName: string, newValue: string | number | boolean | null | undefined) => Promise<void>;
-  inputType?: 'text' | 'textarea' | 'date' | 'email' | 'tel' | 'select' | 'number';
+  inputType?: 'text' | 'textarea' | 'date' | 'email' | 'tel' | 'select' | 'number' | 'datetime-local'; // Ajout de 'datetime-local'
   placeholder?: string;
   options?: Array<{ value: string; label: string }>;
   validationRules?: (value: string | number | boolean | null | undefined) => string | null;
@@ -44,6 +44,7 @@ interface EditableFieldProps {
   displayClassName?: string;
   required?: boolean;
   onDirtyStateChange?: (fieldName: string, isDirty: boolean) => void;
+  displayFormatFunction?: (value: string | number | undefined | null) => string; // Nouvelle prop
 }
 
 const EditableField: React.FC<EditableFieldProps> = ({
@@ -61,6 +62,7 @@ const EditableField: React.FC<EditableFieldProps> = ({
   displayClassName,
   required = false,
   onDirtyStateChange,
+  displayFormatFunction, // Récupérer la nouvelle prop
 }) => {
   const [isEditingField, setIsEditingField] = useState(false);
   const [currentValue, setCurrentValue] = useState(value);
@@ -171,10 +173,10 @@ const EditableField: React.FC<EditableFieldProps> = ({
     const inputElementProps: {
       id: string;
       name: string;
-      value: string | number; // `currentValue || ''` peut être une chaîne ou un nombre (qui sera converti en chaîne par le DOM)
+      value: string | number; 
       onChange: React.ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>;
       onBlur: React.FocusEventHandler<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>;
-      onKeyDown: React.KeyboardEventHandler<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>; // Assez général pour être compatible avec input, textarea, et select
+      onKeyDown: React.KeyboardEventHandler<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>; 
       className: string;
       placeholder?: string;
       'aria-invalid': boolean | undefined;
@@ -183,15 +185,33 @@ const EditableField: React.FC<EditableFieldProps> = ({
     } = {
       id: fieldName,
       name: fieldName,
-      value: currentValue || '',
+      // Formatage de la valeur pour datetime-local
+      value: (() => {
+        if (inputType === 'datetime-local' && typeof currentValue === 'string' && currentValue) {
+          try {
+            const dateObj = new Date(currentValue); // currentValue est une chaîne ISO (UTC)
+            // Formatte en YYYY-MM-DDTHH:MM pour l'affichage local dans l'input
+            const year = dateObj.getFullYear();
+            const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+            const day = dateObj.getDate().toString().padStart(2, '0');
+            const hours = dateObj.getHours().toString().padStart(2, '0');
+            const minutes = dateObj.getMinutes().toString().padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+          } catch (e) {
+            console.error('Error formatting date for datetime-local input:', e);
+            return currentValue; // Fallback si le formatage échoue
+          }
+        }
+        return currentValue || '';
+      })(),
       onChange: handleValueChange,
-      onBlur: handleBlur, // handleBlur est () => void, compatible avec FocusEventHandler
-      onKeyDown: handleKeyDown, // handleKeyDown est KeyboardEventHandler<Input|Textarea>, compatible si les propriétés utilisées de l'événement sont génériques
+      onBlur: handleBlur, 
+      onKeyDown: handleKeyDown, 
       className: `block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${fieldError ? 'border-red-500' : ''} ${inputClassName || ''} flex-grow`,
       placeholder: placeholder,
       'aria-invalid': !!fieldError,
       'aria-describedby': fieldError ? `${fieldName}-error` : undefined,
-      autoFocus: true, // Mettre le focus automatiquement sur le champ
+      autoFocus: true, 
     };
 
     let fieldElement;
@@ -207,7 +227,7 @@ const EditableField: React.FC<EditableFieldProps> = ({
         </select>
       );
     } else {
-      fieldElement = <input type={inputType} {...inputElementProps} />;
+      fieldElement = <input type={inputType} {...inputElementProps} />; // Gère 'date', 'datetime-local', 'number', etc.
     }
 
     return (
@@ -253,7 +273,9 @@ const EditableField: React.FC<EditableFieldProps> = ({
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsEditingField(true);}}}
         >
           <span className="whitespace-pre-wrap break-words flex-grow">
-            {currentValue || <span className="text-gray-400 italic">{placeholder || 'Non renseigné'}</span>}
+            {inputType === 'datetime-local' && displayFormatFunction && typeof currentValue === 'string'
+              ? displayFormatFunction(currentValue)
+              : currentValue || <span className="text-gray-400 italic">{placeholder || 'Non renseigné'}</span>}
           </span>
           {/* L'icône de modification (crayon) n'est plus affichée ici, le clic sur la zone suffit */}
         </div>

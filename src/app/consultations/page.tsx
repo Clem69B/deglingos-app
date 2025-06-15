@@ -1,80 +1,45 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { generateClient } from 'aws-amplify/data';
+import { useEffect, useState } from 'react';
+import { generateClient, SelectionSet } from 'aws-amplify/data';
 import type { Schema } from '../../../amplify/data/resource';
-import type { ConsultationListItem, PatientListItem } from '../../types';
 import Link from 'next/link';
+import ErrorAlert from '../../components/ErrorAlert';
+import PatientCombobox from '../../components/PatientCombobox';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 const client = generateClient<Schema>();
 
-// Type pour le filtre de consultation
-type ConsultationFilter = {
-  patientId?: { eq: string };
-  date?: { 
-    between?: [string, string];
-    ge?: string;
-    le?: string;
-  };
-  or?: Array<{ reason?: { contains: string } }>;
-};
+// Selection sets pour optimiser les requêtes
+const consultationSelectionSet = [
+  'id', 
+  'date', 
+  'reason', 
+  'duration',
+  'patientId',
+  'patient.firstName', 
+  'patient.lastName'
+] as const;
+
+type ConsultationListItem = SelectionSet<Schema['Consultation']['type'], typeof consultationSelectionSet>;
 
 export default function ConsultationsPage() {
-  const [consultations, setConsultations] = useState<ConsultationListItem[]>([]); // Utilisation de la nouvelle interface
-  const [patients, setPatients] = useState<PatientListItem[]>([]); // Utilisation du type Patient local ou global
+  const { error, errorType, setError, clearError, handleAmplifyResponse } = useErrorHandler();
+  const [consultations, setConsultations] = useState<ConsultationListItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPatient, setSelectedPatient] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [nextToken, setNextToken] = useState<string | null>(null);
-  const [hasMoreResults, setHasMoreResults] = useState(true);
-
-  const ITEMS_PER_PAGE = 20;
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchPatientsAndConsultations();
+    fetchConsultations();
   }, []);
 
-  const fetchPatientsAndConsultations = async () => {
+  const fetchConsultations = async () => {
     try {
-      setLoading(true);
-
-      // Fetch patients
-      const patientsResponse = await client.models.Patient.list({
-        selectionSet: ['id', 'firstName', 'lastName', 'createdAt']
-      });
-      
-      // Filtrer et transformer les données pour correspondre au type PatientListItem
-      const validPatients = (patientsResponse.data || [])
-        .filter(patient => patient.id)
-        .map(patient => ({
-          id: patient.id!,
-          firstName: patient.firstName || null,
-          lastName: patient.lastName || null,
-          email: null, // Non récupéré dans cette requête
-          phone: null, // Non récupéré dans cette requête
-          dateOfBirth: null, // Non récupéré dans cette requête
-          createdAt: patient.createdAt!
-        }));
-      
-      setPatients(validPatients);
-    } catch (error) {
-      console.error('Erreur lors du chargement des patients:', error);
-    }
-  };
-
-  const fetchConsultations = useCallback(async (reset = false) => {
-    try {
-      if (reset) {
-        setLoading(true);
-      } else {
-        setLoadingMore(true);
-      }
-
       // Build filter conditions
-      const filter: ConsultationFilter = {};
+      const filter: Record<string, unknown> = {};
       
       if (selectedPatient) {
         filter.patientId = { eq: selectedPatient };
@@ -93,63 +58,36 @@ export default function ConsultationsPage() {
       // Add text search filter
       if (searchTerm) {
         filter.or = [
-          { reason: { contains: searchTerm } },
-          // Si vous souhaitez toujours rechercher dans les notes ou d'autres champs non affichés directement :
-          // { notes: { contains: searchTerm } }, 
-          // { anamnesisSkullCervical: { contains: searchTerm } }, 
-          // etc.
-          // Pour une simplification maximale basée sur l'affichage :
-          // Uniquement la raison si les autres champs ne sont plus dans ConsultationListItem
+          { reason: { contains: searchTerm } }
         ];
       }
 
       const consultationsResponse = await client.models.Consultation.list({
         filter: Object.keys(filter).length > 0 ? filter : undefined,
-        limit: ITEMS_PER_PAGE,
-        nextToken: reset ? undefined : nextToken,
-        selectionSet: [
-          'id', 
-          'date', 
-          'reason', 
-          'duration',
-          'patientId',
-          'patient.firstName', 
-          'patient.lastName'
-        ]
+        limit: 20,
+        selectionSet: consultationSelectionSet
       });
 
-      const newConsultations = (consultationsResponse.data || []) as ConsultationListItem[]; // Cast vers la nouvelle interface
-      
-      if (reset) {
-        setConsultations(newConsultations);
-      } else {
-        setConsultations(prev => [...prev, ...newConsultations]);
+      const consultationsData = handleAmplifyResponse(consultationsResponse);
+      if (consultationsData) {
+        // Trier par date décroissante (plus récentes en premier)
+        const sortedConsultations = [...consultationsData].sort((a, b) => 
+          new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+        setConsultations(sortedConsultations);
       }
-
-      setNextToken(consultationsResponse.nextToken || null);
-      setHasMoreResults(!!consultationsResponse.nextToken);
-
-    } catch (error) {
-      console.error('Erreur lors du chargement des consultations:', error);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Erreur lors du chargement des consultations'));
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  }, [searchTerm, selectedPatient, dateFrom, dateTo, nextToken]);
-
-  useEffect(() => {
-    // Reset pagination when filters change
-    setConsultations([]);
-    setNextToken(null);
-    setHasMoreResults(true);
-    fetchConsultations(true);
-  }, [searchTerm, selectedPatient, dateFrom, dateTo, fetchConsultations]);
-
-  const loadMoreConsultations = () => {
-    if (!loadingMore && hasMoreResults) {
-      fetchConsultations(false);
+      setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!isLoading) {
+      fetchConsultations();
+    }
+  }, [searchTerm, selectedPatient, dateFrom, dateTo]);
 
   const clearFilters = () => {
     setSearchTerm('');
@@ -170,6 +108,15 @@ export default function ConsultationsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Affichage des erreurs */}
+      <ErrorAlert 
+        error={error}
+        type={errorType}
+        title="Erreur de chargement"
+        onClose={clearError}
+        autoClose={false}
+      />
+
       {/* En-tête */}
       <div className="md:flex md:items-center md:justify-between">
         <div className="flex-1 min-w-0">
@@ -177,7 +124,7 @@ export default function ConsultationsPage() {
             Consultations
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Gérez l&apos;historique des consultations de vos patients
+            Gérez l&apos;historique des consultations de vos patients (20 dernières)
           </p>
         </div>
         <div className="mt-4 flex md:mt-0 md:ml-4">
@@ -210,30 +157,24 @@ export default function ConsultationsPage() {
                   id="search"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
-                  placeholder="Motif, diagnostic, symptômes..."
+                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm pl-10 pr-3 py-2"
+                  placeholder="Motif de consultation..."
                 />
               </div>
             </div>
 
-            {/* Filtre par patient */}
+            {/* Filtre par patient - Nouveau composant */}
             <div>
-              <label htmlFor="patient" className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700">
                 Patient
               </label>
-              <select
-                id="patient"
-                value={selectedPatient}
-                onChange={(e) => setSelectedPatient(e.target.value)}
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-              >
-                <option value="">Tous les patients</option>
-                {patients.map((patient) => (
-                  <option key={patient.id} value={patient.id}>
-                    {patient.firstName} {patient.lastName}
-                  </option>
-                ))}
-              </select>
+              <div className="mt-1">
+                <PatientCombobox
+                  value={selectedPatient}
+                  onChange={setSelectedPatient}
+                  placeholder="Rechercher un patient..."
+                />
+              </div>
             </div>
 
             {/* Date de début */}
@@ -246,7 +187,7 @@ export default function ConsultationsPage() {
                 id="dateFrom"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm py-2 px-3"
               />
             </div>
 
@@ -260,7 +201,7 @@ export default function ConsultationsPage() {
                 id="dateTo"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm py-2 px-3"
               />
             </div>
           </div>
@@ -284,7 +225,7 @@ export default function ConsultationsPage() {
 
       {/* Liste des consultations */}
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        {loading ? (
+        {isLoading ? (
           <div className="px-4 py-12 text-center">
             <div className="text-sm text-gray-500">Chargement des consultations...</div>
           </div>
@@ -298,82 +239,46 @@ export default function ConsultationsPage() {
             </div>
           </div>
         ) : (
-          <>
-            <ul className="divide-y divide-gray-200">
-              {consultations.map((consultation) => (
-                <li key={consultation.id}>
-                  <Link
-                    href={`/consultations/${consultation.id}`}
-                    className="block hover:bg-gray-50 px-4 py-4 sm:px-6"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <div className="text-sm font-medium text-indigo-600 truncate">
-                            {consultation.patient?.firstName} {consultation.patient?.lastName}
-                          </div>
+          <ul className="divide-y divide-gray-200">
+            {consultations.map((consultation) => (
+              <li key={consultation.id}>
+                <Link
+                  href={`/consultations/${consultation.id}`}
+                  className="block hover:bg-gray-50 px-4 py-4 sm:px-6"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-medium text-indigo-600 truncate">
+                          {consultation.patient?.firstName} {consultation.patient?.lastName}
                         </div>
-                        <div className="mt-2 sm:flex sm:justify-between">
-                          <div className="sm:flex">
-                            <div className="mr-6 flex items-center text-sm text-gray-500">
-                              <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                              {formatDate(consultation.date)}
-                            </div>
-                            <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                              <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              {consultation.duration || 60} min
-                            </div>
-                          </div>
+                        <div className="ml-2 flex items-center text-sm text-gray-500">
+                          <svg className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          {formatDate(consultation.date)}
                         </div>
-                        <div className="mt-2">
-                          <div className="text-sm text-gray-900">
-                            <span className="font-medium">Motif:</span> {consultation.reason}
-                          </div>
+                      </div>
+                      <div className="mt-1">
+                        <div className="text-sm text-gray-900">
+                          <span className="font-medium">Motif:</span> {consultation.reason}
                         </div>
                       </div>
                     </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            
-            {/* Bouton "Charger plus" */}
-            {hasMoreResults && (
-              <div className="px-4 py-4 text-center border-t border-gray-200">
-                <button
-                  onClick={loadMoreConsultations}
-                  disabled={loadingMore}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                >
-                  {loadingMore ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Chargement...
-                    </>
-                  ) : (
-                    `Charger plus de consultations`
-                  )}
-                </button>
-              </div>
-            )}
-          </>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
 
       {/* Statistiques */}
-      {!loading && (
+      {!isLoading && (
         <div className="bg-white shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
             <div className="text-sm text-gray-500">
-              {consultations.length} consultation(s) affichée(s)
-              {hasMoreResults && ' (plus de résultats disponibles)'}
+              {consultations.length} consultation(s) affichée(s) (limité aux 20 plus récentes)
             </div>
           </div>
         </div>

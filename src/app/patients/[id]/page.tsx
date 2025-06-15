@@ -8,7 +8,7 @@ import { useParams } from 'next/navigation';
 import type { PatientDetail, ConsultationSummary, InvoiceSummary } from '../../../types';
 import EditableField from '../../../components/EditableField';
 import ProtectedLink from '../../../components/ProtectedLink';
-import Link from 'next/link';
+import Link from 'next/link'; // Ajout de l'importation
 import { useDirtyForm } from '../../../contexts/DirtyFormContext';
 import ErrorAlert from '../../../components/ErrorAlert';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
@@ -576,9 +576,12 @@ export default function PatientDetailPage() {
           <div className="bg-white shadow rounded-lg p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Actions rapides</h3>
             <div className="space-y-3">
-              <button className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700">
+              <Link
+                href={`/consultations/new?patientId=${patientId}`}
+                className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+              >
                 Nouvelle consultation
-              </button>
+              </Link>
               <button className="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                 Planifier RDV
               </button>
