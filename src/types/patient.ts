@@ -63,4 +63,7 @@ export interface PatientSummary {
   email?: string | null;
   phone?: string | null;
   dateOfBirth?: string | null;
+  medicalHistory?: string | null;
+  surgicalHistory?: string | null;
+  activities?: string | null;
 }
