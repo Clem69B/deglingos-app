@@ -3,6 +3,7 @@
 import { Authenticator } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
 import '../lib/amplify';
+import { DirtyFormProvider } from '../contexts/DirtyFormContext';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -49,9 +50,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
       }}
     >
       {() => (
-        <div className="min-h-screen bg-gray-50">
-          {children}
-        </div>
+        <DirtyFormProvider>
+          <div className="min-h-screen bg-gray-50">
+            {children}
+          </div>
+        </DirtyFormProvider>
       )}
     </Authenticator>
   );

@@ -31,7 +31,18 @@ const schema = a.schema({
       allow.group('osteopaths'),
       allow.group('assistants').to(['read']),
     ]),
-  
+
+  // Anamnesis custom type
+  Anamnesis: a.customType({
+    skull: a.string(), 
+    cervical: a.string(),
+    digestive: a.string(),
+    cardioThoracic: a.string(),
+    gynecological: a.string(),
+    sleep: a.string(),
+    psychological: a.string(),
+  }),
+
   // Consultation Model
   Consultation: a
     .model({
@@ -39,18 +50,11 @@ const schema = a.schema({
       patientId: a.id().required(),
       patient: a.belongsTo('Patient', 'patientId'),
       date: a.datetime().required(),
-      duration: a.integer().default(60), // minutes
-      reason: a.string().required(),
-      // Anamnèse structurée par systèmes
-      anamnesisSkullCervical: a.string(), // Crâne, Cervicale
-      anamnesisDigestive: a.string(), // Système digestif
-      anamnesisCardioThoracic: a.string(), // Cardique / pulmonaire / thoracique
-      anamnesisGynecological: a.string(), // Gynécologique
-      anamnesisSleep: a.string(), // Sommeil
-      anamnesisPsychological: a.string(), // Psychologique / Emotionnel
+      duration: a.integer().default(60),
+      reason: a.string(),
+      anamnesis: a.ref('Anamnesis'),
       treatment: a.string(),
       recommendations: a.string(),
-      nextAppointment: a.datetime(),
       invoice: a.hasOne('Invoice', 'consultationId'),
       notes: a.string(),
       createdAt: a.datetime(),
