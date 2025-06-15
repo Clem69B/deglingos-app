@@ -18,13 +18,17 @@ Amplify.configure(outputs);
 
 const dataClient = generateClient<Schema>();
 
-const username = await getSecret("username");
+const username = "clem69.b@gmail.com";
 const password = await getSecret("password");
 
 try {
   const user = await createAndSignUpUser({
     username: username,
     password: password,
+    userAttributes: {
+      givenName: "Clément",
+      familyName: "Bazin",
+    },
     signInFlow: 'Password',
     signInAfterCreation: true
   });
@@ -102,14 +106,15 @@ if (patients.data && patients.data.length > 0) {
         'Troubles digestifs',
         'Consultation de routine'
       ][Math.floor(Math.random() * 8)],
-      
-      anamnesisSkullCervical: Math.random() > 0.5 ? `Tensions cervicales modérées, céphalées occasionnelles. ${Math.random().toString(36).substring(2, 15)}.` : undefined,
-      anamnesisDigestive: Math.random() > 0.5 ? `Troubles digestifs légers, ballonnements. ${Math.random().toString(36).substring(2, 15)}.` : undefined,
-      anamnesisCardioThoracic: Math.random() > 0.5 ? `Respiration normale, légères tensions thoraciques. ${Math.random().toString(36).substring(2, 15)}.` : undefined,
-      anamnesisGynecological: Math.random() > 0.5 ? `RAS, cycle régulier. ${Math.random().toString(36).substring(2, 15)}.` : undefined,
-      anamnesisSleep: Math.random() > 0.5 ? `Sommeil fragmenté, réveil nocturne. ${Math.random().toString(36).substring(2, 15)}.` : undefined,
-      anamnesisPsychological: Math.random() > 0.5 ? `Stress professionnel modéré, anxiété légère. ${Math.random().toString(36).substring(2, 15)}.` : undefined,
-      
+      anamnesis: {
+        skull: Math.random() > 0.5 ? `Céphalées fréquentes, tension dans la région occipitale. ${Math.random().toString(36).substring(2, 15)}.` : undefined,
+        cervical: Math.random() > 0.5 ? `Tensions cervicales modérées, céphalées occasionnelles. ${Math.random().toString(36).substring(2, 15)}.` : undefined,
+        digestive: Math.random() > 0.5 ? `Troubles digestifs légers, ballonnements. ${Math.random().toString(36).substring(2, 15)}.` : undefined,
+        cardioThoracic: Math.random() > 0.5 ? `Respiration normale, légères tensions thoraciques. ${Math.random().toString(36).substring(2, 15)}.` : undefined,
+        gynecological: Math.random() > 0.5 ? `RAS, cycle régulier. ${Math.random().toString(36).substring(2, 15)}.` : undefined,
+        sleep: Math.random() > 0.5 ? `Sommeil fragmenté, réveil nocturne. ${Math.random().toString(36).substring(2, 15)}.` : undefined,
+        psychological: Math.random() > 0.5 ? `Stress professionnel modéré, anxiété légère. ${Math.random().toString(36).substring(2, 15)}.` : undefined,
+      },
       treatment: [
         'Techniques de mobilisation articulaire, étirements myofasciaux',
         'Manipulation vertébrale douce, travail sur les fascias',
@@ -126,7 +131,6 @@ if (patients.data && patients.data.length > 0) {
         'Sommeil régulier, exercices de respiration'
       ][Math.floor(Math.random() * 5)],
       
-      nextAppointment: Math.random() > 0.3 ? new Date(Date.now() + Math.floor(Math.random() * 30 + 7) * 24 * 60 * 60 * 1000).toISOString() : undefined,
       notes: `Notes additionnelles: ${Math.random().toString(36).substring(2, 20)}. Évolution favorable.`,
       createdAt: consultationDate.toISOString(),
       updatedAt: consultationDate.toISOString()
