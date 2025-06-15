@@ -5,6 +5,7 @@ import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../../amplify/data/resource';
 import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
+import { uploadData, list, getUrl, remove } from 'aws-amplify/storage'; // Added storage imports
 import type { PatientDetail, ConsultationSummary, InvoiceSummary } from '../../../types';
 import EditableField from '../../../components/EditableField';
 import ProtectedLink from '../../../components/ProtectedLink';
@@ -15,6 +16,13 @@ import { useErrorHandler } from '../../../hooks/useErrorHandler';
 
 const client = generateClient<Schema>();
 const PATIENT_DETAIL_PAGE_DIRTY_SOURCE = 'patientDetailPage';
+
+// Types pour AWS Amplify Storage
+interface StorageListResultItem {
+  path: string;
+  lastModified?: Date;
+  size?: number;
+}
 
 export default function PatientDetailPage() {
   const router = useRouter();
@@ -27,6 +35,14 @@ export default function PatientDetailPage() {
   const [unpaidInvoices, setUnpaidInvoices] = useState<InvoiceSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false); // État pour la suppression
+
+  // State for attachments
+  const [attachments, setAttachments] = useState<StorageListResultItem[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [attachmentsLoading, setAttachmentsLoading] = useState(true);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+
 
   // Dirty state management
   const { isPageDirty, addDirtySource, removeDirtySource } = useDirtyForm(); // Récupérer isPageDirty
@@ -114,10 +130,28 @@ export default function PatientDetailPage() {
       }
     };
 
+    const fetchPatientAttachments = async () => {
+      if (!patientId) return;
+      setAttachmentsLoading(true);
+      setAttachmentError(null);
+      try {
+        const result = await list({
+          path: `patient_attachments/${patientId}/`,
+        });
+        setAttachments(result.items);
+      } catch (err) {
+        console.error('Error listing attachments:', err);
+        setAttachmentError('Erreur lors du chargement des pièces jointes.');
+      } finally {
+        setAttachmentsLoading(false);
+      }
+    };
+
     if (patientId) {
       loadPatientData();
+      fetchPatientAttachments();
     }
-  }, [patientId, router, clearError, handleAmplifyResponse, setError]);
+  }, [patientId, router, clearError, handleAmplifyResponse, setError]); // Added fetchPatientAttachments to dependencies if it were stable, but it's called inside
 
   // handleInputChange, validateForm, handleSave, handleCancel sont supprimés
 
@@ -244,6 +278,102 @@ export default function PatientDetailPage() {
     }
   };
 
+  const fetchPatientAttachments = useCallback(async () => {
+    if (!patientId) return;
+    setAttachmentsLoading(true);
+    setAttachmentError(null);
+    try {
+      const result = await list({
+        path: `patient_attachments/${patientId}/`,
+      });
+      setAttachments(result.items);
+    } catch (err) {
+      console.error('Error listing attachments:', err);
+      setAttachmentError('Erreur lors du chargement des pièces jointes.');
+    } finally {
+      setAttachmentsLoading(false);
+    }
+  }, [patientId]);
+
+  useEffect(() => {
+    if (patientId) {
+      fetchPatientAttachments();
+    }
+  }, [patientId, fetchPatientAttachments]);
+
+
+  const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setAttachmentError(null);
+    }
+  };
+
+  const handleFileUpload = async () => {
+    if (!selectedFile || !patientId) {
+      setAttachmentError("Veuillez sélectionner un fichier.");
+      return;
+    }
+    setIsUploading(true);
+    setAttachmentError(null);
+    try {
+      const result = await uploadData({
+        path: `patient_attachments/${patientId}/${selectedFile.name}`,
+        data: selectedFile,
+        options: {
+          onProgress: ({ transferredBytes, totalBytes }) => {
+            if (totalBytes) {
+              console.log(
+                `Upload Progress: ${Math.round(
+                  (transferredBytes / totalBytes) * 100
+                )} %`
+              );
+            }
+          },
+        }
+      }).result;
+      console.log('Succeeded upload: ', result);
+      setSelectedFile(null); // Reset file input
+      // Clear the file input visually
+      const fileInput = document.getElementById('attachment-upload') as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = '';
+      }
+      await fetchPatientAttachments(); // Refresh the list
+    } catch (err) {
+      console.error('Error uploading file:', err);
+      setAttachmentError(`Erreur lors de l'envoi du fichier: ${ (err as Error).message || 'Vérifiez la console pour plus de détails.'}`);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleFileDownload = async (path: string) => {
+    try {
+      const getUrlResult = await getUrl({ path });
+      window.open(getUrlResult.url.toString(), '_blank');
+    } catch (err) {
+      console.error('Error getting file URL:', err);
+      setAttachmentError('Erreur lors de la récupération du lien de téléchargement.');
+    }
+  };
+
+  const handleFileDelete = async (path: string) => {
+    const confirmDelete = window.confirm("Êtes-vous sûr de vouloir supprimer cette pièce jointe ?");
+    if (!confirmDelete) return;
+
+    setAttachmentError(null);
+    try {
+      await remove({ path });
+      await fetchPatientAttachments(); // Refresh the list
+    } catch (err) {
+      console.error('Error deleting file:', err);
+      setAttachmentError('Erreur lors de la suppression du fichier.');
+    }
+  };
+
+
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return ''; // EditableField gère "Non renseigné"
     return new Date(dateString).toLocaleDateString('fr-FR', {
@@ -279,6 +409,14 @@ export default function PatientDetailPage() {
 
   const getPatientInitials = (firstName: string | null | undefined, lastName: string | null | undefined) => {
     return `${(firstName || '').charAt(0)}${(lastName || '').charAt(0)}`.toUpperCase();
+  };
+
+  const formatFileSize = (bytes?: number) => {
+    if (bytes === undefined || bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   if (loading) {
@@ -681,6 +819,87 @@ export default function PatientDetailPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Attachments Section */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Pièces jointes</h3>
+        {attachmentError && (
+          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
+            {attachmentError}
+          </div>
+        )}
+        <div className="mb-4 space-y-2 sm:space-y-0 sm:flex sm:space-x-2">
+          <input
+            id="attachment-upload"
+            type="file"
+            onChange={handleFileSelected}
+            className="block w-full text-sm text-gray-500
+                       file:mr-4 file:py-2 file:px-4
+                       file:rounded-md file:border-0
+                       file:text-sm file:font-semibold
+                       file:bg-indigo-50 file:text-indigo-700
+                       hover:file:bg-indigo-100
+                       sm:flex-grow"
+          />
+          <button
+            onClick={handleFileUpload}
+            disabled={!selectedFile || isUploading}
+            className={`w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white 
+                        ${(!selectedFile || isUploading) ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'}`}
+          >
+            {isUploading ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Envoi...
+              </>
+            ) : (
+              'Ajouter le fichier'
+            )}
+          </button>
+        </div>
+
+        {attachmentsLoading ? (
+          <div className="text-center py-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+            <p className="mt-2 text-sm text-gray-500">Chargement des pièces jointes...</p>
+          </div>
+        ) : attachments.length > 0 ? (
+          <ul className="divide-y divide-gray-200">
+            {attachments.map((attachment) => (
+              <li key={attachment.path} className="py-3 flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate" title={attachment.path.split('/').pop()}>
+                    {attachment.path.split('/').pop()}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {attachment.lastModified && formatDateTime(attachment.lastModified.toISOString())}
+                    {attachment.size && ` - ${formatFileSize(attachment.size)}`}
+                  </p>
+                </div>
+                <div className="ml-4 flex-shrink-0 space-x-2">
+                  <button
+                    onClick={() => handleFileDownload(attachment.path)}
+                    className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
+                  >
+                    Télécharger
+                  </button>
+                  <button
+                    onClick={() => handleFileDelete(attachment.path)}
+                    className="text-red-600 hover:text-red-900 text-sm font-medium"
+                  >
+                    Supprimer
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-gray-500 text-center py-4">Aucune pièce jointe pour ce patient.</p>
+        )}
       </div>
     </div>
   );
