@@ -93,7 +93,8 @@ export default function ConsultationDetailPage() {
             'anamnesis.cardioThoracic', 'anamnesis.gynecological', 
             'anamnesis.sleep', 'anamnesis.psychological',
             'patient.id', 'patient.firstName', 'patient.lastName', 
-            'patient.email', 'patient.phone', 'patient.dateOfBirth'
+            'patient.email', 'patient.phone', 'patient.dateOfBirth',
+            'patient.medicalHistory', 'patient.surgicalHistory', 'patient.activities' 
           ]
         }
       );
@@ -528,6 +529,24 @@ export default function ConsultationDetailPage() {
                   <div className="text-sm">
                     <span className="font-medium text-gray-500">Téléphone:</span>
                     <span className="ml-2 text-gray-900">{consultation.patient.phone}</span>
+                  </div>
+                )}
+                {consultation.patient?.medicalHistory && (
+                  <div className="text-sm">
+                    <span className="font-medium text-gray-500">Antécédents médicaux:</span>
+                    <p className="ml-2 text-gray-900 whitespace-pre-wrap">{consultation.patient.medicalHistory}</p>
+                  </div>
+                )}
+                {consultation.patient?.surgicalHistory && (
+                  <div className="text-sm">
+                    <span className="font-medium text-gray-500">Antécédents chirurgicaux:</span>
+                    <p className="ml-2 text-gray-900 whitespace-pre-wrap">{consultation.patient.surgicalHistory}</p>
+                  </div>
+                )}
+                {consultation.patient?.activities && (
+                  <div className="text-sm">
+                    <span className="font-medium text-gray-500">Activité:</span>
+                    <p className="ml-2 text-gray-900 whitespace-pre-wrap">{consultation.patient.activities}</p>
                   </div>
                 )}
               </div>
