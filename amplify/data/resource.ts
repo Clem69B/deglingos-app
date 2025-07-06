@@ -1,4 +1,9 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
+import { getUserDetails } from '../functions/get-user-details/resource';
+import { listUsers } from '../functions/list-users/resource';
+import { createUser } from '../functions/create-user/resource';
+import { deleteUser } from '../functions/delete-user/resource';
+import { manageUserGroups } from '../functions/manage-user-groups/resource';
 
 const schema = a.schema({
   // Patient Model
@@ -62,7 +67,8 @@ const schema = a.schema({
     })
     .disableOperations(["subscriptions"])
     .authorization((allow) => [
-      allow.group('osteopaths')
+      allow.group('osteopaths'),
+      allow.owner()
     ]),
 
   // Invoice Model
@@ -113,6 +119,97 @@ const schema = a.schema({
       allow.group('osteopaths'),
       allow.group('assistants'),
     ]),
+
+  // User Details Type
+  UserDetailsType: a.customType({
+    userId: a.string().required(),
+    email: a.string().required(),
+    givenName: a.string().required(),
+    familyName: a.string().required(),
+    phoneNumber: a.string(),
+    enabled: a.boolean().required(),
+    userStatus: a.string().required(),
+    groups: a.string().array(),
+    createdDate: a.string().required(),
+    lastModifiedDate: a.string().required(),
+  }),
+
+  // User List Type
+  UserListType: a.customType({
+    users: a.ref('UserDetailsType').array(),
+    nextToken: a.string(),
+    totalCount: a.integer(),
+  }),
+
+  // User Mutation Response Type
+  UserMutationResponseType: a.customType({
+    success: a.boolean().required(),
+    message: a.string().required(),
+    userId: a.string(),
+  }),
+
+  // User Management Queries
+  getUserDetails: a
+    .query()
+    .arguments({ userId: a.string().required() })
+    .authorization((allow) => [allow.group('osteopaths')])
+    .handler(a.handler.function(getUserDetails))
+    .returns(a.ref('UserDetailsType')),
+
+  listUsers: a
+    .query()
+    .arguments({ 
+      limit: a.integer(), 
+      nextToken: a.string() 
+    })
+    .authorization((allow) => [
+      allow.group('osteopaths'),
+      allow.group('assistants'),
+      allow.group('admins')
+    ])
+    .handler(a.handler.function(listUsers))
+    .returns(a.ref('UserListType')),
+
+  // User Management Mutations (admin only)
+  createUser: a
+    .mutation()
+    .arguments({
+      email: a.string().required(),
+      givenName: a.string().required(),
+      familyName: a.string().required(),
+      phoneNumber: a.string(),
+      groups: a.string().array()
+    })
+    .authorization((allow) => [allow.group('admins')])
+    .handler(a.handler.function(createUser))
+    .returns(a.ref('UserMutationResponseType')),
+
+  deleteUser: a
+    .mutation()
+    .arguments({ userId: a.string().required() })
+    .authorization((allow) => [allow.group('admins')])
+    .handler(a.handler.function(deleteUser))
+    .returns(a.ref('UserMutationResponseType')),
+
+  addUserToGroup: a
+    .mutation()
+    .arguments({
+      userId: a.string().required(),
+      groupName: a.string().required()
+    })
+    .authorization((allow) => [allow.group('admins')])
+    .handler(a.handler.function(manageUserGroups))
+    .returns(a.ref('UserMutationResponseType')),
+
+  removeUserFromGroup: a
+    .mutation()
+    .arguments({
+      userId: a.string().required(),
+      groupName: a.string().required()
+    })
+    .authorization((allow) => [allow.group('admins')])
+    .handler(a.handler.function(manageUserGroups))
+    .returns(a.ref('UserMutationResponseType')),
 });
 
 export type Schema = ClientSchema<typeof schema>;

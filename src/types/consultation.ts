@@ -51,6 +51,7 @@ export interface ConsultationListItem {
 export interface ConsultationWithPatient extends ConsultationBaseData, BaseEntity {
   patientId?: string;
   patient?: PatientSummary | null;
+  owner?: string | null;
 }
 
 // Type pour résumé de consultation (utilisé dans le profil patient)
