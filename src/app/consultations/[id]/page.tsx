@@ -10,6 +10,7 @@ import { useErrorHandler } from '../../../hooks/useErrorHandler';
 import { useDirtyForm } from '../../../contexts/DirtyFormContext';
 import ErrorAlert from '../../../components/ErrorAlert';
 import EditableField from '../../../components/EditableField';
+import { UserName } from '../../../components/users';
 
 const client = generateClient<Schema>();
 const CONSULTATION_DETAIL_PAGE_DIRTY_SOURCE = 'consultationDetailPage';
@@ -88,7 +89,7 @@ export default function ConsultationDetailPage() {
         {
           selectionSet: [
             'id', 'date', 'duration', 'reason', 'treatment', 'recommendations', 
-            'notes', 'createdAt', 'updatedAt',
+            'notes', 'createdAt', 'updatedAt', 'owner',
             'anamnesis.skull', 'anamnesis.cervical', 'anamnesis.digestive', 
             'anamnesis.cardioThoracic', 'anamnesis.gynecological', 
             'anamnesis.sleep', 'anamnesis.psychological',
@@ -578,6 +579,12 @@ export default function ConsultationDetailPage() {
                   <span className="font-medium text-gray-500">Modifié le:</span>
                   <span className="ml-2 text-gray-900">
                     {consultation.updatedAt ? formatDate(consultation.updatedAt) : 'Non disponible'}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-500">Praticien:</span>
+                  <span className="ml-2 text-gray-900">
+                    <UserName userId={consultation.owner} />
                   </span>
                 </div>
               </div>

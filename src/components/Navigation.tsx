@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import ProtectedLink from './ProtectedLink';
+import { UserName } from './users';
 import { useDirtyForm } from '../contexts/DirtyFormContext';
 
 const navigation = [
@@ -136,7 +137,10 @@ export default function Navigation() {
                 <>
                   <div className="flex items-center text-sm text-gray-700">
                     <UserIcon className="w-4 h-4 mr-2" />
-                    <span>{user?.signInDetails?.loginId || "Utilisateur"}</span>
+                    <UserName 
+                      userId={user?.userId} 
+                      fallback={user?.signInDetails?.loginId || "Utilisateur"} 
+                    />
                   </div>
                   <button
                     onClick={handleSignOut}
@@ -232,7 +236,10 @@ export default function Navigation() {
                   <UserIcon className="w-8 h-8 text-gray-400" />
                   <div className="ml-3">
                     <div className="text-base font-medium text-gray-800">
-                      {user?.signInDetails?.loginId || "Utilisateur"}
+                      <UserName 
+                        userId={user?.userId} 
+                        fallback={user?.signInDetails?.loginId || "Utilisateur"} 
+                      />
                     </div>
                   </div>
                 </div>
