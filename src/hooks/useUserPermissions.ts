@@ -26,6 +26,7 @@ export const useUserPermissions = () => {
           setUserGroups([]);
         }
       } catch (error) {
+        console.error('❌ Error fetching user:', error);
         setUserGroups([]);
       } finally {
         setLoading(false);
