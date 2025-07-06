@@ -32,7 +32,8 @@ try {
     signInFlow: 'Password',
     signInAfterCreation: true
   });
-  await addToUserGroup(user, "osteopaths")
+  await addToUserGroup(user, "osteopaths");
+  await addToUserGroup(user, "admins");
 } catch (err) {
   const error = err as Error;
   if (error.name === 'UsernameExistsError') {
