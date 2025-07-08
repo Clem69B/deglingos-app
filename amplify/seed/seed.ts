@@ -143,4 +143,40 @@ if (patients.data && patients.data.length > 0) {
   }
 }
 
+// Create sample invoice data
+const consultations = await dataClient.models.Consultation.list();
+if (consultations.data && consultations.data.length > 0) {
+  for (const consultation of consultations.data) {
+    // Create an invoice for each consultation
+    if (!consultation.patientId || !consultation.id) {
+      continue; // Skip if essential IDs are missing
+    }
+
+    const price = Math.floor(Math.random() * (100 - 50 + 1) + 50); // Random price between 50 and 100
+    const isPaid = Math.random() > 0.5;
+    const paymentMethod = ['CHEQUE', 'VIREMENT', 'ESPECES', 'CARTE_BANCAIRE'][Math.floor(Math.random() * 4)] as 'CHEQUE' | 'VIREMENT' | 'ESPECES' | 'CARTE_BANCAIRE';
+    
+    const response = await dataClient.models.Invoice.create({
+      patientId: consultation.patientId,
+      consultationId: consultation.id,
+      invoiceNumber: `INV-${String(Date.now()).slice(-6)}-${Math.floor(Math.random() * 1000)}`,
+      date: consultation.date.split('T')[0], // Format YYYY-MM-DD from ISO string
+      price: price,
+      total: price, // Total is the same as price
+      isPaid: isPaid,
+      status: isPaid ? 'PAID' : ['DRAFT', 'SENT', 'OVERDUE'][Math.floor(Math.random() * 3)] as 'DRAFT' | 'SENT' | 'OVERDUE',
+      paymentMethod: paymentMethod,
+      paymentReference: (paymentMethod === 'CHEQUE' || paymentMethod === 'VIREMENT') ? `Ref-${Math.random().toString(36).substring(2, 9)}` : undefined,
+      paidAt: isPaid ? new Date().toISOString() : undefined,
+      notes: `Sample invoice note: ${Math.random().toString(36).substring(2, 15)}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    if (response.errors && response.errors.length > 0) {
+      throw response.errors;
+    }
+  }
+}
+
 auth.signOut();
