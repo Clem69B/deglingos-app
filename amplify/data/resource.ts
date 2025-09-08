@@ -85,7 +85,7 @@ const schema = a.schema({
       price: a.float(),
       total: a.float(),
       isPaid: a.boolean().default(false),
-      status: a.enum(['DRAFT', 'SENT', 'PAID', 'OVERDUE']),
+      status: a.enum(['DRAFT', 'PENDING', 'PAID', 'OVERDUE']),
       paymentMethod: a.enum(['CHEQUE', 'VIREMENT', 'ESPECES', 'CARTE_BANCAIRE']),
       paymentReference: a.string(),
       paidAt: a.datetime(),

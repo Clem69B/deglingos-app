@@ -37,7 +37,7 @@ const useInvoiceManagement = () => {
         filter: filter ? { patientId: { eq: filter.patientId } } : undefined,
         selectionSet: [
           "id", "invoiceNumber", "date", "total", "status", "isPaid",
-          "patient.id", "patient.firstName", "patient.lastName"
+          "patient.id", "patient.firstName", "patient.lastName", "patient.email"
         ],
       });
       if (errors) throw errors;
@@ -98,7 +98,7 @@ const useInvoiceManagement = () => {
       if (!data) return null;
 
       const updatedInvoice = await _resolveInvoiceRelationships(data);
-      setInvoice(updatedInvoice);
+      updateLocalCaches(updatedInvoice);
       return updatedInvoice;
     } catch (err) {
       setError(err);
@@ -113,6 +113,173 @@ const useInvoiceManagement = () => {
     setInvoice(updatedInvoice);
   };
 
+  // Sync single-invoice and invoices list (used for optimistic apply/revert)
+  const updateLocalCaches = (updated: Invoice) => {
+    setInvoice(updated);
+    setInvoices(prev => prev.map(inv => inv.id === updated.id ? updated : inv));
+  };
+
+  // Generic field update with optimistic UI
+  const updateField = async (id: string, fieldName: string, value: any): Promise<Invoice | null> => {
+    // Ensure the invoice is loaded and is the one we are editing
+    if (!invoice || invoice.id !== id) {
+      await getInvoiceById(id);
+    }
+    if (!invoice) throw new Error('Invoice not loaded');
+
+    const oldInvoice = { ...invoice };
+    const updatedAt = new Date().toISOString();
+    const updatedInvoice: Invoice = {
+      ...invoice,
+      [fieldName]: value,
+      updatedAt,
+    };
+
+    // Optimistic update
+    updateLocalCaches(updatedInvoice);
+
+    try {
+      const result = await updateInvoice({
+        id,
+        [fieldName]: value,
+        updatedAt,
+      } as UpdateInvoiceInput);
+      if (!result) throw new Error('Update failed');
+      updateLocalCaches(result);
+      return result;
+    } catch (err) {
+      // Revert on failure
+      updateLocalCaches(oldInvoice);
+      setError(err);
+      throw err;
+    }
+  };
+
+  // Centralized transition helpers with optimistic updates
+  const markAsPending = async (id: string) => {
+    if (!invoice || invoice.id !== id) {
+      // fetch if local invoice is missing or different
+      await getInvoiceById(id);
+    }
+    if (!invoice) throw new Error('Invoice not loaded');
+
+    const oldInvoice = { ...invoice };
+    const updatedInvoice: Invoice = {
+      ...invoice,
+      status: 'PENDING',
+      isPaid: false,
+      paidAt: null,
+      updatedAt: new Date().toISOString(),
+    };
+
+    // optimistic update
+    updateLocalCaches(updatedInvoice);
+
+    try {
+      const result = await updateInvoice({
+        id,
+        status: 'PENDING',
+        isPaid: false,
+        paidAt: null,
+        updatedAt: updatedInvoice.updatedAt,
+      } as UpdateInvoiceInput);
+      if (!result) throw new Error('Update failed');
+      updateLocalCaches(result);
+    } catch (err) {
+      updateLocalCaches(oldInvoice);
+      setError(err);
+      throw err;
+    }
+  };
+
+  const markAsPaid = async (id: string) => {
+    if (!invoice || invoice.id !== id) {
+      await getInvoiceById(id);
+    }
+    if (!invoice) throw new Error('Invoice not loaded');
+
+    const oldInvoice = { ...invoice };
+    const paidAt = new Date().toISOString();
+    const updatedInvoice: Invoice = {
+      ...invoice,
+      status: 'PAID',
+      isPaid: true,
+      paidAt,
+      updatedAt: paidAt,
+    };
+
+    updateLocalCaches(updatedInvoice);
+
+    try {
+      const result = await updateInvoice({
+        id,
+        status: 'PAID',
+        isPaid: true,
+        paidAt,
+        updatedAt: updatedInvoice.updatedAt,
+      } as UpdateInvoiceInput);
+      if (!result) throw new Error('Update failed');
+      updateLocalCaches(result);
+    } catch (err) {
+      updateLocalCaches(oldInvoice);
+      setError(err);
+      throw err;
+    }
+  };
+
+  const unmarkAsPaid = async (id: string) => {
+    if (!invoice || invoice.id !== id) {
+      await getInvoiceById(id);
+    }
+    if (!invoice) throw new Error('Invoice not loaded');
+
+    const oldInvoice = { ...invoice };
+    const updatedInvoice: Invoice = {
+      ...invoice,
+      status: 'PENDING',
+      isPaid: false,
+      paidAt: null,
+      updatedAt: new Date().toISOString(),
+    };
+
+    updateLocalCaches(updatedInvoice);
+
+    try {
+      const result = await updateInvoice({
+        id,
+        status: 'PENDING',
+        isPaid: false,
+        paidAt: null,
+        updatedAt: updatedInvoice.updatedAt,
+      } as UpdateInvoiceInput);
+      if (!result) throw new Error('Update failed');
+      updateLocalCaches(result);
+    } catch (err) {
+      updateLocalCaches(oldInvoice);
+      setError(err);
+      throw err;
+    }
+  };
+
+  // Trigger backend email send (calls a Next.js API route that will proxy to an actual mailer / lambda)
+  const sendInvoiceEmail = async (id: string) => {
+    setError(null);
+    try {
+      // Ensure we have the latest invoice and patient email
+      const current = await getInvoiceById(id);
+      if (!current) throw new Error('Invoice not found');
+
+      const email = current.patient?.email;
+      if (!email) throw new Error('No patient email found for this invoice');
+
+      // Fonction d'envoi non implémentée — lever une erreur explicite
+      throw new Error("Fonction d'envoi d'email non disponible pour le moment.");
+    } catch (err) {
+      setError(err);
+      throw err;
+    }
+  };
+
   return {
     invoices,
     invoice,
@@ -122,7 +289,13 @@ const useInvoiceManagement = () => {
     getInvoiceById,
     createInvoice,
     updateInvoice,
+    updateField,
     setLocalInvoice, // Expose the setter for optimistic updates
+    // New actions
+    markAsPending,
+    markAsPaid,
+    unmarkAsPaid,
+    sendInvoiceEmail,
   };
 };
 

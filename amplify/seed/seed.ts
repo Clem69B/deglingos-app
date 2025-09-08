@@ -164,7 +164,7 @@ if (consultations.data && consultations.data.length > 0) {
       price: price,
       total: price, // Total is the same as price
       isPaid: isPaid,
-      status: isPaid ? 'PAID' : ['DRAFT', 'SENT', 'OVERDUE'][Math.floor(Math.random() * 3)] as 'DRAFT' | 'SENT' | 'OVERDUE',
+      status: isPaid ? 'PAID' : ['DRAFT', 'PENDING', 'OVERDUE'][Math.floor(Math.random() * 3)] as 'DRAFT' | 'PENDING' | 'OVERDUE',
       paymentMethod: paymentMethod,
       paymentReference: (paymentMethod === 'CHEQUE' || paymentMethod === 'VIREMENT') ? `Ref-${Math.random().toString(36).substring(2, 9)}` : undefined,
       paidAt: isPaid ? new Date().toISOString() : undefined,

@@ -133,9 +133,9 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ consultationId, patientId }) 
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 bg-white p-8 shadow rounded-lg">
+    <form onSubmit={handleSubmit} className="space-y-8 form-card">
       <div className="space-y-4">
-        <h2 className="text-2xl font-bold text-gray-900">Nouvelle Facture</h2>
+        <h2 className="page-title">Nouvelle Facture</h2>
         <p className="text-sm text-gray-500">
           {consultationId ? "Création d'une facture pour une consultation existante." : "Création d'une nouvelle facture manuelle."}
         </p>
@@ -145,7 +145,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ consultationId, patientId }) 
 
       <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
         <div className="sm:col-span-3">
-          <label htmlFor="patientId" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="patientId" className="form-label">
             Patient
           </label>
           <div className="mt-1">
@@ -158,7 +158,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ consultationId, patientId }) 
         </div>
 
         <div className="sm:col-span-3">
-          <label htmlFor="invoiceNumber" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="invoiceNumber" className="form-label">
             Numéro de facture (généré automatiquement)
           </label>
           <div className="mt-1">
@@ -168,13 +168,13 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ consultationId, patientId }) 
               id="invoiceNumber"
               value={formData.invoiceNumber}
               readOnly
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-gray-100"
+              className="form-input form-input-readonly"
             />
           </div>
         </div>
 
         <div className="sm:col-span-3">
-          <label htmlFor="date" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="date" className="form-label">
             Date de facturation
           </label>
           <div className="mt-1">
@@ -184,14 +184,14 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ consultationId, patientId }) 
               id="date"
               value={formData.date}
               onChange={handleChange}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="form-input"
               required
             />
           </div>
         </div>
 
         <div className="sm:col-span-2">
-          <label htmlFor="price" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="price" className="form-label">
             Montant
           </label>
           <div className="mt-1">
@@ -202,14 +202,14 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ consultationId, patientId }) 
               value={formData.price || ''}
               onChange={handleChange}
               step="0.01"
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="form-input"
               required
             />
           </div>
         </div>
 
         <div className="sm:col-span-4">
-          <label htmlFor="paymentMethod" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="paymentMethod" className="form-label">
             Moyen de paiement
           </label>
           <div className="mt-1">
@@ -218,7 +218,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ consultationId, patientId }) 
               name="paymentMethod"
               value={formData.paymentMethod || ''}
               onChange={handleChange}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="form-input"
             >
               <option value="VIREMENT">Virement</option>
               <option value="CHEQUE">Chèque</option>
@@ -229,7 +229,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ consultationId, patientId }) 
         </div>
 
         <div className="sm:col-span-6">
-          <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="notes" className="form-label">
             Notes
           </label>
           <div className="mt-1">
@@ -239,7 +239,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ consultationId, patientId }) 
               rows={3}
               value={formData.notes || ''}
               onChange={handleChange}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="form-input"
             />
           </div>
         </div>
@@ -250,14 +250,14 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ consultationId, patientId }) 
           <button
             type="button"
             onClick={() => router.back()}
-            className="rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            className="btn-secondary"
           >
             Annuler
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="ml-3 inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+            className="ml-3 btn btn-primary disabled:opacity-50"
           >
             {isSubmitting ? 'Création...' : 'Créer la facture'}
           </button>
