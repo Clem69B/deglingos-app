@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../../amplify/data/resource';
 import type { ConsultationWithPatient } from '../../../types';
-import type { InvoiceStatus, PaymentMethod } from '../../../types';
+import type { PaymentMethod } from '../../../types';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
@@ -12,6 +12,7 @@ import { useDirtyForm } from '../../../contexts/DirtyFormContext';
 import ErrorAlert from '../../../components/ErrorAlert';
 import EditableField from '../../../components/EditableField';
 import { UserName } from '../../../components/users';
+import { translateStatus } from '@/lib/invoiceStatus';
 
 const client = generateClient<Schema>();
 const CONSULTATION_DETAIL_PAGE_DIRTY_SOURCE = 'consultationDetailPage';
@@ -257,17 +258,6 @@ export default function ConsultationDetailPage() {
       age--;
     }
     return age;
-  };
-
-  const translateInvoiceStatus = (status: InvoiceStatus | null | undefined) => {
-    if (!status) return 'N/A';
-    const translations: Record<InvoiceStatus, string> = {
-      DRAFT: 'Brouillon',
-      SENT: 'Envoyée',
-      PAID: 'Payée',
-      OVERDUE: 'En retard',
-    };
-    return translations[status];
   };
 
   const translatePaymentMethod = (method: PaymentMethod | null | undefined) => {
@@ -599,7 +589,7 @@ export default function ConsultationDetailPage() {
                     <div>
                       <span className="font-medium text-gray-500">Statut:</span>
                       <span className={`ml-2 ${consultation.invoice.status === 'OVERDUE' ? 'text-red-600 font-bold' : 'text-gray-900'}`}>
-                        {translateInvoiceStatus(consultation.invoice.status)}
+                        {translateStatus(consultation.invoice.status || 'DRAFT')}
                       </span>
                     </div>
                     <div>

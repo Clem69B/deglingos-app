@@ -75,7 +75,16 @@ const useInvoiceManagement = () => {
     setLoading(true);
     setError(null);
     try {
-      const { data, errors } = await client.models.Invoice.create(input);
+      // Ensure dueDate is set: default to invoice date + 7 days when not provided
+      const safeInput: CreateInvoiceInput = { ...input } as CreateInvoiceInput;
+      if (!safeInput.dueDate) {
+        const base = safeInput.date ? new Date(safeInput.date) : new Date();
+        base.setDate(base.getDate() + 7);
+        // store as ISO date (yyyy-mm-dd)
+        safeInput.dueDate = base.toISOString().split('T')[0];
+      }
+
+      const { data, errors } = await client.models.Invoice.create(safeInput);
       if (errors) throw errors;
       if (!data) return null;
       
@@ -93,7 +102,15 @@ const useInvoiceManagement = () => {
     setLoading(true);
     setError(null);
     try {
-      const { data, errors } = await client.models.Invoice.update(input);
+      // If update includes `date`, always set dueDate = date + 7 days
+      const safeInput: UpdateInvoiceInput = { ...input } as UpdateInvoiceInput;
+      if (safeInput.date) {
+        const base = new Date(safeInput.date);
+        base.setDate(base.getDate() + 7);
+        safeInput.dueDate = base.toISOString().split('T')[0];
+      }
+
+      const { data, errors } = await client.models.Invoice.update(safeInput);
       if (errors) throw errors;
       if (!data) return null;
 

@@ -1,6 +1,7 @@
 import type { BaseEntity } from './common';
 import type { InvoiceStatus } from './common';
 import { PatientSummary } from './patient';
+import { ConsultationSummary } from './consultation'
 
 // Enum pour les méthodes de paiement
 export type PaymentMethod = 'CHEQUE' | 'VIREMENT' | 'ESPECES' | 'CARTE_BANCAIRE';
@@ -38,12 +39,6 @@ export interface InvoiceSummary extends BaseEntity {
   total?: number | null;
   status?: InvoiceStatus | null;
   patientId: string;
-}
-
-// Summary for a linked consultation
-export interface ConsultationSummary {
-  id: string;
-  date: string;
 }
 
 // Type pour les données complètes d'une facture, y compris les relations
