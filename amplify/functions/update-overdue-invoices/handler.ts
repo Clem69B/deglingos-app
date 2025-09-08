@@ -1,12 +1,13 @@
 import { env } from '$amplify/env/update-overdue-invoices';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { ScheduledEvent } from 'aws-lambda';
 
 // Initialize DynamoDB client
 const dynamoClient = new DynamoDBClient({ region: env.AWS_REGION });
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
 
-export const handler = async (event: any) => {
+export const handler = async (event: ScheduledEvent) => {
   console.log('Starting overdue invoice update job', JSON.stringify(event, null, 2));
   
   try {

@@ -1,7 +1,7 @@
 import type { BaseEntity } from './common';
 import type { InvoiceStatus } from './common';
 import { PatientSummary } from './patient';
-import { ConsultationSummary } from './consultation'
+import { ConsultationSummary } from './consultation';
 
 // Enum pour les méthodes de paiement
 export type PaymentMethod = 'CHEQUE' | 'VIREMENT' | 'ESPECES' | 'CARTE_BANCAIRE';
