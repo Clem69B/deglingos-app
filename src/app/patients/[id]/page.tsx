@@ -13,6 +13,7 @@ import Link from 'next/link'; // Ajout de l'importation
 import { useDirtyForm } from '../../../contexts/DirtyFormContext';
 import ErrorAlert from '../../../components/ErrorAlert';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
+import { translateStatus } from '@/lib/invoiceStatus';
 
 const client = generateClient<Schema>();
 const PATIENT_DETAIL_PAGE_DIRTY_SOURCE = 'patientDetailPage';
@@ -754,9 +755,7 @@ export default function PatientDetailPage() {
                         ? 'bg-red-100 text-red-800'
                         : 'bg-yellow-100 text-yellow-800'
                         }`}>
-                        {invoice.status === 'OVERDUE' ? 'En retard' :
-                          invoice.status === 'SENT' ? 'Envoyée' :
-                            'Brouillon'}
+                        {translateStatus(invoice.status || 'DRAFT')}
                       </span>
                     </div>
                   </div>

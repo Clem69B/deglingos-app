@@ -13,7 +13,6 @@ interface InvoiceDetailsProps {
   unmarkAsPaid: (id: string) => Promise<void>;
   sendInvoiceEmail: (id: string) => Promise<boolean>;
   isUpdatingStatus: boolean;
-  isSendingEmail: boolean;
 }
 
 const InvoiceDetails = ({

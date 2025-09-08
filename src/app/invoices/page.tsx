@@ -46,11 +46,6 @@ const InvoicesPage = () => {
             Gérez vos factures et suivez les paiements
           </p>
         </div>
-        <div className="page-actions">
-          <Link href="/invoices/new" className="btn-primary">
-            Nouvelle Facture
-          </Link>
-        </div>
       </div>
 
       {/* Filtres de recherche */}
