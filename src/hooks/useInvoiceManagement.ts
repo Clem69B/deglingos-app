@@ -11,21 +11,37 @@ const useInvoiceManagement = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<any | null>(null);
+  const [error, setError] = useState<string | Error | Array<{ message: string }> | null>(null);
 
   // Helper to consistently shape the invoice data for the frontend
   const _resolveInvoiceRelationships = async (invoiceModel: Schema['Invoice']['type']): Promise<Invoice> => {
     const patient = (await invoiceModel.patient())?.data ?? null;
     const consultationData = (await invoiceModel.consultation())?.data ?? null;
-    
-    // Destructure to remove the original relationship functions
-    const { patient: _, consultation: __, ...baseData } = invoiceModel;
-    
+
+    // Copy model and remove relationship accessors before returning
+    const baseData = { ...(invoiceModel as Record<string, unknown>) } as Record<string, unknown>;
+    delete baseData.patient;
+    delete baseData.consultation;
+
     return {
-      ...baseData,
+      ...(baseData as Record<string, unknown>),
       patient,
-      consultation: consultationData ? { id: consultationData.id, date: consultationData.date } : null
+      consultation: consultationData ? { id: consultationData.id, date: consultationData.date } : null,
     } as unknown as Invoice;
+  };
+
+  const normalizeError = (err: unknown): string | Error | Array<{ message: string }> => {
+    if (!err) return 'Unknown error';
+    if (typeof err === 'string') return err;
+    if (err instanceof Error) return err;
+    if (Array.isArray(err) && err.every(e => e && typeof e === 'object' && 'message' in e && typeof ((e as Record<string, unknown>).message) === 'string')) {
+      return err as Array<{ message: string }>;
+    }
+    try {
+      return new Error(JSON.stringify(err));
+    } catch {
+      return 'Unknown error';
+    }
   };
 
   const listInvoices = useCallback(async (filter?: { patientId: string }) => {
@@ -44,7 +60,7 @@ const useInvoiceManagement = () => {
       // We cast the result to our frontend Invoice type
       setInvoices(data as unknown as Invoice[]);
     } catch (err) {
-      setError(err);
+      setError(normalizeError(err));
       console.error("Failed to list invoices:", err);
     } finally {
       setLoading(false);
@@ -63,7 +79,7 @@ const useInvoiceManagement = () => {
       setInvoice(fullInvoiceData);
       return fullInvoiceData;
     } catch (err) {
-      setError(err);
+      setError(normalizeError(err));
       console.error(`Failed to fetch invoice with ID ${id}:`, err);
       return null;
     } finally {
@@ -90,7 +106,7 @@ const useInvoiceManagement = () => {
       
       return await _resolveInvoiceRelationships(data);
     } catch (err) {
-      setError(err);
+      setError(normalizeError(err));
       console.error("Failed to create invoice:", err);
       return null;
     } finally {
@@ -118,7 +134,7 @@ const useInvoiceManagement = () => {
       updateLocalCaches(updatedInvoice);
       return updatedInvoice;
     } catch (err) {
-      setError(err);
+      setError(normalizeError(err));
       console.error("Failed to update invoice:", err);
       return null;
     } finally {
@@ -137,7 +153,7 @@ const useInvoiceManagement = () => {
   };
 
   // Generic field update with optimistic UI
-  const updateField = async (id: string, fieldName: string, value: any): Promise<Invoice | null> => {
+  const updateField = async (id: string, fieldName: string, value: unknown): Promise<Invoice | null> => {
     // Ensure the invoice is loaded and is the one we are editing
     if (!invoice || invoice.id !== id) {
       await getInvoiceById(id);
@@ -167,7 +183,7 @@ const useInvoiceManagement = () => {
     } catch (err) {
       // Revert on failure
       updateLocalCaches(oldInvoice);
-      setError(err);
+      setError(normalizeError(err));
       throw err;
     }
   };
@@ -204,7 +220,7 @@ const useInvoiceManagement = () => {
       updateLocalCaches(result);
     } catch (err) {
       updateLocalCaches(oldInvoice);
-      setError(err);
+      setError(normalizeError(err));
       throw err;
     }
   };
@@ -239,7 +255,7 @@ const useInvoiceManagement = () => {
       updateLocalCaches(result);
     } catch (err) {
       updateLocalCaches(oldInvoice);
-      setError(err);
+      setError(normalizeError(err));
       throw err;
     }
   };
@@ -273,7 +289,7 @@ const useInvoiceManagement = () => {
       updateLocalCaches(result);
     } catch (err) {
       updateLocalCaches(oldInvoice);
-      setError(err);
+      setError(normalizeError(err));
       throw err;
     }
   };
@@ -292,7 +308,7 @@ const useInvoiceManagement = () => {
       // Fonction d'envoi non implémentée — lever une erreur explicite
       throw new Error("Fonction d'envoi d'email non disponible pour le moment.");
     } catch (err) {
-      setError(err);
+      setError(normalizeError(err));
       throw err;
     }
   };

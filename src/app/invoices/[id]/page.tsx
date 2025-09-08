@@ -6,13 +6,12 @@ import useInvoiceManagement from '@/hooks/useInvoiceManagement';
 import InvoiceDetails from '@/components/invoices/InvoiceDetails';
 import ErrorAlert from '@/components/ErrorAlert';
 import Link from 'next/link';
-import type { Invoice } from '@/types/invoice';
 
 const InvoiceDetailPage = () => {
   const params = useParams();
   const id = params.id as string;
   const { invoice, loading, error, getInvoiceById, updateField, markAsPending, markAsPaid, unmarkAsPaid, sendInvoiceEmail } = useInvoiceManagement();
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isUpdatingStatus] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -20,7 +19,7 @@ const InvoiceDetailPage = () => {
     }
   }, [id, getInvoiceById]);
 
-  const updateInvoiceField = useCallback(async (fieldName: string, value: any) => {
+  const updateInvoiceField = useCallback(async (fieldName: string, value: unknown) => {
     if (!invoice) return;
     await updateField(invoice.id, fieldName, value);
   }, [invoice, updateField]);

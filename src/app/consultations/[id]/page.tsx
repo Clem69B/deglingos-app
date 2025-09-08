@@ -75,13 +75,7 @@ export default function ConsultationDetailPage() {
     };
   }, [isPageDirty]);
 
-  useEffect(() => {
-    if (consultationId) {
-      fetchConsultation(consultationId);
-    }
-  }, [consultationId]);
-
-  const fetchConsultation = async (id: string) => {
+  const fetchConsultation = useCallback(async (id: string) => {
     try {
       setLoading(true);
       clearError();
@@ -111,11 +105,17 @@ export default function ConsultationDetailPage() {
       setConsultation(consultationData as ConsultationWithPatient);
     } catch (err) {
       console.error('Erreur lors du chargement de la consultation:', err);
-      setError(err instanceof Error ? err : new Error('Erreur lors du chargement des données de la consultation.'));
+      setError(err instanceof Error ? err : new Error('Erreur lors du chargement des donn\'ees de la consultation.'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [clearError, handleAmplifyResponse, setError]);
+
+  useEffect(() => {
+    if (consultationId) {
+      fetchConsultation(consultationId);
+    }
+  }, [consultationId, fetchConsultation]);
 
   const updateConsultationField = async (entityId: string, fieldName: string, newValue: string | number | boolean | null | undefined) => {
     if (!consultation) return;
@@ -606,7 +606,7 @@ export default function ConsultationDetailPage() {
                 </div>
               ) : (
                 <div>
-                  <p className="text-sm text-gray-500 mb-2">Aucune facture n'est liée à cette consultation.</p>
+                  <p className="text-sm text-gray-500 mb-2">Aucune facture n&apos;est liée à cette consultation.</p>
                   <button
                     onClick={() => router.push(`/invoices/new?consultationId=${consultation.id}&patientId=${consultation.patient?.id}`)}
                     className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"

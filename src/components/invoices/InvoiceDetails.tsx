@@ -7,7 +7,7 @@ import EditableField from '../EditableField';
 
 interface InvoiceDetailsProps {
   invoice: Invoice;
-  updateField: (fieldName: string, value: any) => Promise<void>;
+  updateField: (fieldName: string, value: unknown) => Promise<void>;
   markAsPending: (id: string) => Promise<void>;
   markAsPaid: (id: string) => Promise<void>;
   unmarkAsPaid: (id: string) => Promise<void>;
@@ -25,11 +25,11 @@ const InvoiceDetails = ({
   isUpdatingStatus,
 }: InvoiceDetailsProps) => {
   
-  const handleUpdate = async (entityId: string, fieldName: string, value: any) => {
+  const handleUpdate = async (_entityId: string, fieldName: string, value: unknown) => {
     try {
       await updateField(fieldName, value);
-    } catch (error) {
-      console.error(`Failed to update ${fieldName}`, error);
+    } catch (err) {
+      console.error(`Failed to update ${fieldName}`, err);
     }
   };
 
