@@ -304,7 +304,7 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
     }
   };
 
-  // Trigger backend email send (calls a Next.js API route that will proxy to an actual mailer / lambda)
+  // Trigger backend email send (calls the Amplify email function)
   const sendInvoiceEmail = async (id: string) => {
     onError('');
     try {
@@ -315,8 +315,20 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
       const email = current.patient?.email;
       if (!email) throw new Error('No patient email found for this invoice');
 
-      // Fonction d'envoi non implémentée — lever une erreur explicite
-      throw new Error("Fonction d'envoi d'email non disponible pour le moment.");
+      // Call the Amplify email function
+      const { data, errors } = await client.mutations.sendInvoiceEmail({ invoiceId: id });
+      
+      if (errors) {
+        throw new Error(errors.map(e => e.message).join(', '));
+      }
+      
+      if (!data?.success) {
+        throw new Error(data?.message || 'Failed to send email');
+      }
+      
+      console.log('Email sent successfully:', data.message);
+      return true;
+      
     } catch (err) {
       handleError(err);
       throw err;

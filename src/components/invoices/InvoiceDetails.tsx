@@ -25,6 +25,8 @@ const InvoiceDetails = ({
   sendInvoiceEmail,
   isUpdatingStatus,
 }: InvoiceDetailsProps) => {
+  const [isSendingEmail, setIsSendingEmail] = React.useState(false);
+  const [emailStatus, setEmailStatus] = React.useState<{type: 'success' | 'error', message: string} | null>(null);
   
   const handleUpdate = async (_entityId: string, fieldName: string, value: unknown) => {
     try {
@@ -55,10 +57,22 @@ const InvoiceDetails = ({
   };
 
   const onSendEmail = async () => {
+    setIsSendingEmail(true);
+    setEmailStatus(null);
     try {
       await sendInvoiceEmail(invoice.id);
-    } catch (err) {
+      setEmailStatus({
+        type: 'success',
+        message: `Email envoyé avec succès à ${invoice.patient?.email}`
+      });
+    } catch (err: any) {
       console.error('Failed to send invoice email', err);
+      setEmailStatus({
+        type: 'error',
+        message: err.message || 'Erreur lors de l\'envoi de l\'email'
+      });
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -94,8 +108,9 @@ const InvoiceDetails = ({
             <button
               className="btn btn-secondary"
               onClick={onSendEmail}
+              disabled={isSendingEmail || !invoice.patient?.email}
             >
-              Envoyé par email
+              {isSendingEmail ? 'Envoi en cours...' : 'Envoyer par email'}
             </button>
 
             {/* Paid/unpaid toggle */}
@@ -109,6 +124,26 @@ const InvoiceDetails = ({
           </div>
         </div>
       </div>
+      
+      {/* Email Status Message */}
+      {emailStatus && (
+        <div className={`p-4 rounded-md ${emailStatus.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+          <p className="text-sm">{emailStatus.message}</p>
+        </div>
+      )}
+      
+      {/* Warning if no email */}
+      {!invoice.patient?.email && (
+        <div className="p-4 rounded-md bg-yellow-50 text-yellow-700">
+          <p className="text-sm">
+            ⚠️ Aucune adresse email n'est enregistrée pour ce patient. 
+            <Link href={`/patients/${invoice.patient?.id}`} className="underline ml-1">
+              Ajouter une adresse email
+            </Link>
+          </p>
+        </div>
+      )}
+      
       <div className="detail-content">
         <dl className="sm:divide-y sm:divide-gray-200 grid grid-cols-1 sm:grid-cols-2">
           

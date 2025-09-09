@@ -4,6 +4,7 @@ import { listUsers } from '../functions/list-users/resource';
 import { createUser } from '../functions/create-user/resource';
 import { deleteUser } from '../functions/delete-user/resource';
 import { manageUserGroups } from '../functions/manage-user-groups/resource';
+import { sendInvoiceEmail } from '../functions/send-invoice-email/resource';
 
 const schema = a.schema({
   // Patient Model
@@ -149,6 +150,13 @@ const schema = a.schema({
     userId: a.string(),
   }),
 
+  // Email Response Type
+  EmailResponseType: a.customType({
+    success: a.boolean().required(),
+    message: a.string().required(),
+    messageId: a.string(),
+  }),
+
   // User Management Queries
   getUserDetails: a
     .query()
@@ -211,6 +219,19 @@ const schema = a.schema({
     .authorization((allow) => [allow.group('admins')])
     .handler(a.handler.function(manageUserGroups))
     .returns(a.ref('UserMutationResponseType')),
+
+  // Invoice Email Mutation
+  sendInvoiceEmail: a
+    .mutation()
+    .arguments({
+      invoiceId: a.string().required()
+    })
+    .authorization((allow) => [
+      allow.group('osteopaths'),
+      allow.group('assistants')
+    ])
+    .handler(a.handler.function(sendInvoiceEmail))
+    .returns(a.ref('EmailResponseType')),
 });
 
 export type Schema = ClientSchema<typeof schema>;
