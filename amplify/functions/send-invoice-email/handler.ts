@@ -48,10 +48,20 @@ export const handler = async (event: any) => {
       throw new Error(`Patient ${patient.firstName} ${patient.lastName} has no email address`);
     }
     
+    // Validate invoice data
+    if (!invoice.invoiceNumber) {
+      throw new Error('Invoice number is missing');
+    }
+    
+    if (!invoice.date) {
+      throw new Error('Invoice date is missing');
+    }
+    
     // Create email content
-    const subject = `Facture ${invoice.invoiceNumber} - Cabinet d'Ostéopathie`;
-    const htmlBody = generateInvoiceEmailHTML(invoice, patient);
-    const textBody = generateInvoiceEmailText(invoice, patient);
+    const cabinetName = env.CABINET_NAME || 'Cabinet d\'Ostéopathie';
+    const subject = `Facture ${invoice.invoiceNumber} - ${cabinetName}`;
+    const htmlBody = generateInvoiceEmailHTML(invoice, patient, cabinetName);
+    const textBody = generateInvoiceEmailText(invoice, patient, cabinetName);
     
     // Send email via SES
     const emailParams = {
@@ -99,7 +109,7 @@ export const handler = async (event: any) => {
 };
 
 // Generate HTML email template
-function generateInvoiceEmailHTML(invoice: any, patient: any): string {
+function generateInvoiceEmailHTML(invoice: any, patient: any, cabinetName: string): string {
   const invoiceDate = new Date(invoice.date).toLocaleDateString('fr-FR');
   const dueDate = invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('fr-FR') : 'Non spécifiée';
   const total = invoice.total ? `${invoice.total.toFixed(2)} €` : 'Non spécifié';
@@ -124,7 +134,7 @@ function generateInvoiceEmailHTML(invoice: any, patient: any): string {
     <body>
       <div class="container">
         <div class="header">
-          <h1>Cabinet d'Ostéopathie</h1>
+          <h1>${cabinetName}</h1>
           <p>Votre facture est disponible</p>
         </div>
         
@@ -165,13 +175,13 @@ function generateInvoiceEmailHTML(invoice: any, patient: any): string {
 }
 
 // Generate plain text email template
-function generateInvoiceEmailText(invoice: any, patient: any): string {
+function generateInvoiceEmailText(invoice: any, patient: any, cabinetName: string): string {
   const invoiceDate = new Date(invoice.date).toLocaleDateString('fr-FR');
   const dueDate = invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('fr-FR') : 'Non spécifiée';
   const total = invoice.total ? `${invoice.total.toFixed(2)} €` : 'Non spécifié';
   
   return `
-Cabinet d'Ostéopathie
+${cabinetName}
 Votre facture est disponible
 
 Bonjour ${patient.firstName} ${patient.lastName},

@@ -20,6 +20,8 @@ backend.data.resources.tables['Invoice'].grantReadWriteData(backend.updateOverdu
 // Grant the email function access to Invoice and Patient tables
 backend.sendInvoiceEmail.addEnvironment('AMPLIFY_DATA_INVOICE_TABLE_NAME', backend.data.resources.tables['Invoice'].tableName);
 backend.sendInvoiceEmail.addEnvironment('AMPLIFY_DATA_PATIENT_TABLE_NAME', backend.data.resources.tables['Patient'].tableName);
+backend.sendInvoiceEmail.addEnvironment('SENDER_EMAIL', process.env.SENDER_EMAIL || 'noreply@deglingos-app.com');
+backend.sendInvoiceEmail.addEnvironment('CABINET_NAME', process.env.CABINET_NAME || 'Cabinet d\'Ostéopathie');
 backend.data.resources.tables['Invoice'].grantReadData(backend.sendInvoiceEmail.resources.lambda);
 backend.data.resources.tables['Patient'].grantReadData(backend.sendInvoiceEmail.resources.lambda);
 
