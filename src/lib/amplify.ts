@@ -1,9 +1,11 @@
 import { Amplify } from 'aws-amplify';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let outputs: any;
 try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   outputs = require('../../amplify_outputs.json');
-} catch (error) {
+} catch {
   // amplify_outputs.json doesn't exist during development before deployment
   outputs = {
     version: "1",

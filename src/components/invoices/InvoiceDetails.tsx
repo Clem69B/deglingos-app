@@ -65,11 +65,11 @@ const InvoiceDetails = ({
         type: 'success',
         message: `Email envoyé avec succès à ${invoice.patient?.email}`
       });
-    } catch (err: any) {
+    } catch (err: Error | unknown) {
       console.error('Failed to send invoice email', err);
       setEmailStatus({
         type: 'error',
-        message: err.message || 'Erreur lors de l\'envoi de l\'email'
+        message: (err as Error).message || 'Erreur lors de l\'envoi de l\'email'
       });
     } finally {
       setIsSendingEmail(false);
@@ -136,7 +136,7 @@ const InvoiceDetails = ({
       {!invoice.patient?.email && (
         <div className="p-4 rounded-md bg-yellow-50 text-yellow-700">
           <p className="text-sm">
-            ⚠️ Aucune adresse email n'est enregistrée pour ce patient. 
+            ⚠️ Aucune adresse email n&apos;est enregistrée pour ce patient. 
             <Link href={`/patients/${invoice.patient?.id}`} className="underline ml-1">
               Ajouter une adresse email
             </Link>
