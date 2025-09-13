@@ -4,6 +4,7 @@ import React from 'react';
 import type { Invoice } from '@/types/invoice';
 import Link from 'next/link';
 import EditableField from '../EditableField';
+import { getStatusBadgeColor, translateStatus } from '@/lib/invoiceStatus';
 
 interface InvoiceDetailsProps {
   invoice: Invoice;
@@ -30,36 +31,6 @@ const InvoiceDetails = ({
       await updateField(fieldName, value);
     } catch (err) {
       console.error(`Failed to update ${fieldName}`, err);
-    }
-  };
-
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case 'PAID':
-        return 'badge-success';
-      case 'PENDING':
-        return 'badge-info';
-      case 'OVERDUE':
-        return 'badge-error';
-      case 'DRAFT':
-        return 'badge-warning';
-      default:
-        return 'badge-ghost';
-    }
-  };
-
-  const translateStatus = (status: string) => {
-    switch (status) {
-      case 'PAID':
-        return 'Payée';
-      case 'PENDING':
-        return 'En attente de paiement';
-      case 'OVERDUE':
-        return 'En retard';
-      case 'DRAFT':
-        return 'Brouillon';
-      default:
-        return status;
     }
   };
 
