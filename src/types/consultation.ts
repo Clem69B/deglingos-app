@@ -1,5 +1,6 @@
-import type { BaseEntity } from './common';
+import type { BaseEntity, InvoiceStatus } from './common';
 import type { PatientSummary } from './patient';
+import type { PaymentMethod } from './invoice';
 
 // Interface pour les données d'anamnèse
 export interface AnamnesisData {
@@ -52,6 +53,11 @@ export interface ConsultationWithPatient extends ConsultationBaseData, BaseEntit
   patientId?: string;
   patient?: PatientSummary | null;
   owner?: string | null;
+  invoice?: {
+    id: string;
+    status?: InvoiceStatus | null;
+    paymentMethod?: PaymentMethod | null;
+  } | null;
 }
 
 // Type pour résumé de consultation (utilisé dans le profil patient)

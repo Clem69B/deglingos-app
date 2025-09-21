@@ -13,6 +13,7 @@ import Link from 'next/link'; // Ajout de l'importation
 import { useDirtyForm } from '../../../contexts/DirtyFormContext';
 import ErrorAlert from '../../../components/ErrorAlert';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
+import UnpaidInvoices from '@/components/invoices/UnpaidInvoices';
 
 const client = generateClient<Schema>();
 const PATIENT_DETAIL_PAGE_DIRTY_SOURCE = 'patientDetailPage';
@@ -730,45 +731,7 @@ export default function PatientDetailPage() {
           </div>
 
           {/* Unpaid Invoices */}
-          {unpaidInvoices.length > 0 && (
-            <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Factures impayées</h3>
-              <div className="space-y-3">
-                {unpaidInvoices.slice(0, 3).map((invoice) => (
-                  <div key={invoice.id} className="border border-red-200 rounded-lg p-3 bg-red-50">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-sm font-medium text-red-900">
-                          Facture #{invoice.invoiceNumber}
-                        </p>
-                        <p className="text-xs text-red-700">
-                          {formatDate(invoice.date)}
-                        </p>
-                      </div>
-                      <span className="text-sm font-medium text-red-900">
-                        {invoice.total}€
-                      </span>
-                    </div>
-                    <div className="mt-2">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${invoice.status === 'OVERDUE'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                        {invoice.status === 'OVERDUE' ? 'En retard' :
-                          invoice.status === 'SENT' ? 'Envoyée' :
-                            'Brouillon'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                {unpaidInvoices.length > 3 && (
-                  <p className="text-sm text-gray-500 text-center">
-                    Et {unpaidInvoices.length - 3} autres...
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
+          <UnpaidInvoices invoices={unpaidInvoices} formatDate={formatDate} />
 
           {/* Full Consultations List */}
           <div className="bg-white shadow rounded-lg">

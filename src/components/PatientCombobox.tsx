@@ -15,13 +15,15 @@ interface PatientComboboxProps {
   onChange: (patientId: string) => void;
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 export default function PatientCombobox({ 
   value, 
   onChange, 
   placeholder = "Rechercher un patient...",
-  className = ""
+  className = "",
+  disabled = false
 }: PatientComboboxProps) {
   const { setError, handleAmplifyResponse } = useErrorHandler();
   const [isOpen, setIsOpen] = useState(false);
@@ -239,8 +241,9 @@ export default function PatientCombobox({
           onFocus={handleInputFocus}
           onBlur={handleInputBlur}
           placeholder={placeholder}
-          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm pr-10 pl-3 py-2"
+          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm pr-10 pl-3 py-2 disabled:bg-gray-100"
           autoComplete="off"
+          disabled={disabled}
         />
         
         {/* Bouton clear */}
@@ -249,6 +252,7 @@ export default function PatientCombobox({
             type="button"
             onClick={clearSelection}
             className="absolute inset-y-0 right-8 flex items-center pr-2 text-gray-400 hover:text-gray-600"
+            disabled={disabled}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

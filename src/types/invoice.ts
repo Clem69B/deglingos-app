@@ -1,5 +1,10 @@
 import type { BaseEntity } from './common';
 import type { InvoiceStatus } from './common';
+import { PatientSummary } from './patient';
+import { ConsultationSummary } from './consultation';
+
+// Enum pour les méthodes de paiement
+export type PaymentMethod = 'CHEQUE' | 'VIREMENT' | 'ESPECES' | 'CARTE_BANCAIRE';
 
 // Interface de base pour les factures
 export interface InvoiceBaseData {
@@ -7,12 +12,13 @@ export interface InvoiceBaseData {
   date: string; // ISO date string
   dueDate?: string | null;
   price?: number | null;
-  tax?: number | null;
-  total: number;
+  total?: number | null;
   status?: InvoiceStatus | null;
   notes?: string | null;
   isPaid?: boolean | null;
   paidAt?: string | null;
+  paymentMethod?: PaymentMethod | null;
+  paymentReference?: string | null;
 }
 
 // Type pour créer une facture
@@ -30,7 +36,15 @@ export interface UpdateInvoiceInput extends Partial<InvoiceBaseData> {
 export interface InvoiceSummary extends BaseEntity {
   invoiceNumber: string;
   date: string;
-  total: number;
+  total?: number | null;
   status?: InvoiceStatus | null;
   patientId: string;
+}
+
+// Type pour les données complètes d'une facture, y compris les relations
+export interface Invoice extends InvoiceBaseData, BaseEntity {
+  patientId: string;
+  consultationId?: string | null;
+  patient?: PatientSummary | null;
+  consultation?: ConsultationSummary | null;
 }
