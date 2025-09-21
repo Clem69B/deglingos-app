@@ -10,8 +10,9 @@ import Link from 'next/link';
 const InvoiceDetailPage = () => {
   const params = useParams();
   const id = params.id as string;
-  const { invoice, loading, error, getInvoiceById, updateField, markAsPending, markAsPaid, unmarkAsPaid, sendInvoiceEmail } = useInvoiceManagement();
   const [isUpdatingStatus] = useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const { invoice, loading, getInvoiceById, updateField, markAsPending, markAsPaid, unmarkAsPaid, sendInvoiceEmail } = useInvoiceManagement({ onError: setError });
 
   useEffect(() => {
     if (id) {

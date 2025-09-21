@@ -3,7 +3,7 @@
 // Genre pour les patients
 export type Gender = 'M' | 'F' | 'OTHER';
 
- // Statut des factures
+// Statut des factures
 export type InvoiceStatus = 'DRAFT' | 'PENDING' | 'PAID' | 'OVERDUE';
 
 // Interface de base pour les éléments avec ID

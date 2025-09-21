@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../amplify/data/resource';
-import ErrorAlert from '../ErrorAlert';
 import PatientCombobox from '../PatientCombobox';
 import type { CreateInvoiceInput } from '../../types/invoice';
 import useInvoiceManagement from '../../hooks/useInvoiceManagement';
@@ -14,11 +13,12 @@ const client = generateClient<Schema>();
 interface InvoiceFormProps {
   consultationId?: string | null;
   patientId?: string | null;
+  onError: (error: string) => void;
 }
 
-const InvoiceForm: React.FC<InvoiceFormProps> = ({ consultationId, patientId }) => {
+const InvoiceForm: React.FC<InvoiceFormProps> = ({ consultationId, patientId, onError }) => {
   const router = useRouter();
-  const { createInvoice, loading: isSubmitting, error } = useInvoiceManagement();
+  const { createInvoice, loading: isSubmitting } = useInvoiceManagement({ onError });
   const [selectedPatient, setSelectedPatient] = useState<{ firstName: string; lastName: string } | null>(null);
   
   const [formData, setFormData] = useState<Partial<CreateInvoiceInput>>({
@@ -102,11 +102,14 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ consultationId, patientId }) 
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
     if (!formData.patientId || !formData.invoiceNumber || !formData.date) {
-      // Basic validation, the hook might have more robust error handling
-      alert('Veuillez remplir tous les champs requis (Patient, Numéro de facture, Date).');
+      if (typeof onError === 'function') {
+        onError('Veuillez remplir tous les champs requis (Patient, Numéro de facture, Date).');
+      }
       return;
+    }
+    if (typeof onError === 'function') {
+      onError(''); // Clear error
     }
 
     const input: CreateInvoiceInput = {
@@ -140,8 +143,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ consultationId, patientId }) 
           {consultationId ? "Création d'une facture pour une consultation existante." : "Création d'une nouvelle facture manuelle."}
         </p>
       </div>
-
-      <ErrorAlert error={error} />
 
       <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
         <div className="sm:col-span-3">

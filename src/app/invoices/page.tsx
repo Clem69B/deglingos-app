@@ -8,7 +8,8 @@ import ErrorAlert from '@/components/ErrorAlert';
 import { getStatusBadgeColor, translateStatus } from '@/lib/invoiceStatus';
 
 const InvoicesPage = () => {
-  const { invoices, loading, error, listInvoices } = useInvoiceManagement();
+  const [error, setError] = React.useState<string | null>(null);
+  const { invoices, loading, listInvoices } = useInvoiceManagement({ onError: setError });
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
 
   useEffect(() => {

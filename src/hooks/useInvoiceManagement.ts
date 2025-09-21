@@ -1,17 +1,20 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { generateClient } from 'aws-amplify/api';
+import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource';
 import type { Invoice, CreateInvoiceInput, UpdateInvoiceInput } from '@/types/invoice';
 
 const client = generateClient<Schema>();
 
-const useInvoiceManagement = () => {
+interface UseInvoiceManagementOptions {
+  onError: (error: string) => void;
+}
+
+const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | Error | Array<{ message: string }> | null>(null);
 
   // Helper to consistently shape the invoice data for the frontend
   const _resolveInvoiceRelationships = async (invoiceModel: Schema['Invoice']['type']): Promise<Invoice> => {
@@ -30,23 +33,30 @@ const useInvoiceManagement = () => {
     } as unknown as Invoice;
   };
 
-  const normalizeError = (err: unknown): string | Error | Array<{ message: string }> => {
+  const normalizeError = (err: unknown): string => {
     if (!err) return 'Unknown error';
     if (typeof err === 'string') return err;
-    if (err instanceof Error) return err;
+    if (err instanceof Error) return err.message || 'Unknown error';
     if (Array.isArray(err) && err.every(e => e && typeof e === 'object' && 'message' in e && typeof ((e as Record<string, unknown>).message) === 'string')) {
-      return err as Array<{ message: string }>;
+      return (err as Array<{ message: string }>).map(e => e.message).join(' | ');
     }
     try {
-      return new Error(JSON.stringify(err));
+      return JSON.stringify(err);
     } catch {
       return 'Unknown error';
     }
   };
 
+  // Helper to consistently handle errors: normalize -> call onError or set local state
+  const handleError = (err: unknown) => {
+    const message = normalizeError(err);
+    onError(message);
+    return message;
+  };
+
   const listInvoices = useCallback(async (filter?: { patientId: string }) => {
     setLoading(true);
-    setError(null);
+    onError('');
     try {
       // Use selectionSet to fetch related patient data in a single query
       const { data, errors } = await client.models.Invoice.list({ 
@@ -60,16 +70,16 @@ const useInvoiceManagement = () => {
       // We cast the result to our frontend Invoice type
       setInvoices(data as unknown as Invoice[]);
     } catch (err) {
-      setError(normalizeError(err));
+      handleError(err);
       console.error("Failed to list invoices:", err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [onError]);
 
   const getInvoiceById = useCallback(async (id: string) => {
     setLoading(true);
-    setError(null);
+    onError('');
     try {
       const { data, errors } = await client.models.Invoice.get({ id });
       if (errors) throw errors;
@@ -79,17 +89,17 @@ const useInvoiceManagement = () => {
       setInvoice(fullInvoiceData);
       return fullInvoiceData;
     } catch (err) {
-      setError(normalizeError(err));
+      handleError(err);
       console.error(`Failed to fetch invoice with ID ${id}:`, err);
       return null;
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [onError]);
 
   const createInvoice = async (input: CreateInvoiceInput): Promise<Invoice | null> => {
     setLoading(true);
-    setError(null);
+    onError('');
     try {
       // Ensure dueDate is set: default to invoice date + 7 days when not provided
       const safeInput: CreateInvoiceInput = { ...input } as CreateInvoiceInput;
@@ -106,7 +116,7 @@ const useInvoiceManagement = () => {
       
       return await _resolveInvoiceRelationships(data);
     } catch (err) {
-      setError(normalizeError(err));
+      handleError(err);
       console.error("Failed to create invoice:", err);
       return null;
     } finally {
@@ -116,7 +126,7 @@ const useInvoiceManagement = () => {
 
   const updateInvoice = async (input: UpdateInvoiceInput): Promise<Invoice | null> => {
     setLoading(true);
-    setError(null);
+    onError('');
     try {
       // If update includes `date`, always set dueDate = date + 7 days
       const safeInput: UpdateInvoiceInput = { ...input } as UpdateInvoiceInput;
@@ -134,7 +144,7 @@ const useInvoiceManagement = () => {
       updateLocalCaches(updatedInvoice);
       return updatedInvoice;
     } catch (err) {
-      setError(normalizeError(err));
+      handleError(err);
       console.error("Failed to update invoice:", err);
       return null;
     } finally {
@@ -183,7 +193,7 @@ const useInvoiceManagement = () => {
     } catch (err) {
       // Revert on failure
       updateLocalCaches(oldInvoice);
-      setError(normalizeError(err));
+      handleError(err);
       throw err;
     }
   };
@@ -220,7 +230,7 @@ const useInvoiceManagement = () => {
       updateLocalCaches(result);
     } catch (err) {
       updateLocalCaches(oldInvoice);
-      setError(normalizeError(err));
+      handleError(err);
       throw err;
     }
   };
@@ -255,7 +265,7 @@ const useInvoiceManagement = () => {
       updateLocalCaches(result);
     } catch (err) {
       updateLocalCaches(oldInvoice);
-      setError(normalizeError(err));
+      handleError(err);
       throw err;
     }
   };
@@ -289,14 +299,14 @@ const useInvoiceManagement = () => {
       updateLocalCaches(result);
     } catch (err) {
       updateLocalCaches(oldInvoice);
-      setError(normalizeError(err));
+      handleError(err);
       throw err;
     }
   };
 
   // Trigger backend email send (calls a Next.js API route that will proxy to an actual mailer / lambda)
   const sendInvoiceEmail = async (id: string) => {
-    setError(null);
+    onError('');
     try {
       // Ensure we have the latest invoice and patient email
       const current = await getInvoiceById(id);
@@ -308,7 +318,7 @@ const useInvoiceManagement = () => {
       // Fonction d'envoi non implémentée — lever une erreur explicite
       throw new Error("Fonction d'envoi d'email non disponible pour le moment.");
     } catch (err) {
-      setError(normalizeError(err));
+      handleError(err);
       throw err;
     }
   };
@@ -317,7 +327,6 @@ const useInvoiceManagement = () => {
     invoices,
     invoice,
     loading,
-    error,
     listInvoices,
     getInvoiceById,
     createInvoice,
