@@ -12,7 +12,8 @@ interface InvoiceDetailsProps {
   markAsPending: (id: string) => Promise<void>;
   markAsPaid: (id: string) => Promise<void>;
   unmarkAsPaid: (id: string) => Promise<void>;
-  sendInvoiceEmail: (id: string) => Promise<boolean>;
+  sendInvoiceEmail: (id: string) => Promise<void>;
+  downloadInvoicePDF: (id: string) => Promise<void>;
   isUpdatingStatus: boolean;
 }
 
@@ -23,6 +24,7 @@ const InvoiceDetails = ({
   markAsPaid,
   unmarkAsPaid,
   sendInvoiceEmail,
+  downloadInvoicePDF,
   isUpdatingStatus,
 }: InvoiceDetailsProps) => {
   
@@ -62,6 +64,14 @@ const InvoiceDetails = ({
     }
   };
 
+  const onPrintInvoice = async () => {
+    try {
+      await downloadInvoicePDF(invoice.id);
+    } catch (err) {
+      console.error('Failed to download invoice PDF', err);
+    }
+  };
+
   return (
     <div className="form-card overflow-hidden">
       <div className="detail-header">
@@ -90,10 +100,20 @@ const InvoiceDetails = ({
               </button>
             )}
 
-            {/* Send email (does not change status) */}
+            {/* Print button - disabled when DRAFT */}
+            <button
+              className="btn btn-secondary"
+              onClick={onPrintInvoice}
+              disabled={invoice.status === 'DRAFT'}
+            >
+              Impression
+            </button>
+
+            {/* Send email button - disabled when DRAFT or no patient email */}
             <button
               className="btn btn-secondary"
               onClick={onSendEmail}
+              disabled={invoice.status === 'DRAFT' || !invoice.patient?.email}
             >
               Envoyé par email
             </button>
@@ -163,6 +183,7 @@ const InvoiceDetails = ({
               entityId={invoice.id}
               updateFunction={handleUpdate}
               inputType="number"
+              disabled={invoice.status === 'PAID'}
             />
           </div>
 

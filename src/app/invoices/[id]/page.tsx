@@ -12,7 +12,7 @@ const InvoiceDetailPage = () => {
   const id = params.id as string;
   const [isUpdatingStatus] = useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const { invoice, loading, getInvoiceById, updateField, markAsPending, markAsPaid, unmarkAsPaid, sendInvoiceEmail } = useInvoiceManagement({ onError: setError });
+  const { invoice, loading, getInvoiceById, updateField, markAsPending, markAsPaid, unmarkAsPaid, sendInvoiceEmail, downloadInvoicePDF } = useInvoiceManagement({ onError: setError });
 
   useEffect(() => {
     if (id) {
@@ -45,6 +45,7 @@ const InvoiceDetailPage = () => {
           markAsPaid={markAsPaid}
           unmarkAsPaid={unmarkAsPaid}
           sendInvoiceEmail={sendInvoiceEmail}
+          downloadInvoicePDF={downloadInvoicePDF}
           isUpdatingStatus={isUpdatingStatus}
         />
       )}

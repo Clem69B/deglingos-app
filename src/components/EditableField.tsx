@@ -43,6 +43,7 @@ interface EditableFieldProps {
   inputClassName?: string;
   displayClassName?: string;
   required?: boolean;
+  disabled?: boolean;
   onDirtyStateChange?: (fieldName: string, isDirty: boolean) => void;
   displayFormatFunction?: (value: string | number | undefined | null) => string; // Nouvelle prop
 }
@@ -61,6 +62,7 @@ const EditableField: React.FC<EditableFieldProps> = ({
   inputClassName,
   displayClassName,
   required = false,
+  disabled = false,
   onDirtyStateChange,
   displayFormatFunction, // Récupérer la nouvelle prop
 }) => {
@@ -265,12 +267,12 @@ const EditableField: React.FC<EditableFieldProps> = ({
         renderInputField()
       ) : (
         <div
-          onClick={() => setIsEditingField(true)}
-          className={`group mt-1 text-sm text-gray-900 cursor-pointer hover:bg-gray-50 p-2 border border-transparent hover:border-gray-300 rounded-md min-h-[38px] flex items-center justify-between ${displayClassName || ''}`}
+          onClick={() => !disabled && setIsEditingField(true)}
+          className={`group mt-1 text-sm text-gray-900 ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-50'} p-2 border border-transparent ${disabled ? '' : 'hover:border-gray-300'} rounded-md min-h-[38px] flex items-center justify-between ${displayClassName || ''}`}
           role="button"
-          tabIndex={0}
-          onFocus={() => setIsEditingField(true)}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsEditingField(true);}}}
+          tabIndex={disabled ? -1 : 0}
+          onFocus={() => !disabled && setIsEditingField(true)}
+          onKeyDown={(e) => { if (!disabled && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setIsEditingField(true);}}}
         >
           <span className="whitespace-pre-wrap break-words flex-grow">
             {inputType === 'datetime-local' && displayFormatFunction && typeof currentValue === 'string'
