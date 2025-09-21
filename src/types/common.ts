@@ -4,7 +4,7 @@
 export type Gender = 'M' | 'F' | 'OTHER';
 
 // Statut des factures
-export type InvoiceStatus = 'DRAFT' | 'SENT' | 'PAID' | 'OVERDUE';
+export type InvoiceStatus = 'DRAFT' | 'PENDING' | 'PAID' | 'OVERDUE';
 
 // Interface de base pour les éléments avec ID
 export interface BaseEntity {

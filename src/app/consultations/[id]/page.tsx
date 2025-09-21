@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../../amplify/data/resource';
 import type { ConsultationWithPatient } from '../../../types';
+import type { PaymentMethod } from '../../../types';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
@@ -11,6 +12,7 @@ import { useDirtyForm } from '../../../contexts/DirtyFormContext';
 import ErrorAlert from '../../../components/ErrorAlert';
 import EditableField from '../../../components/EditableField';
 import { UserName } from '../../../components/users';
+import { translateStatus } from '@/lib/invoiceStatus';
 
 const client = generateClient<Schema>();
 const CONSULTATION_DETAIL_PAGE_DIRTY_SOURCE = 'consultationDetailPage';
@@ -73,13 +75,7 @@ export default function ConsultationDetailPage() {
     };
   }, [isPageDirty]);
 
-  useEffect(() => {
-    if (consultationId) {
-      fetchConsultation(consultationId);
-    }
-  }, [consultationId]);
-
-  const fetchConsultation = async (id: string) => {
+  const fetchConsultation = useCallback(async (id: string) => {
     try {
       setLoading(true);
       clearError();
@@ -95,7 +91,8 @@ export default function ConsultationDetailPage() {
             'anamnesis.sleep', 'anamnesis.psychological',
             'patient.id', 'patient.firstName', 'patient.lastName', 
             'patient.email', 'patient.phone', 'patient.dateOfBirth',
-            'patient.medicalHistory', 'patient.surgicalHistory', 'patient.activities' 
+            'patient.medicalHistory', 'patient.surgicalHistory', 'patient.activities',
+            'invoice.id', 'invoice.status', 'invoice.paymentMethod'
           ]
         }
       );
@@ -108,11 +105,17 @@ export default function ConsultationDetailPage() {
       setConsultation(consultationData as ConsultationWithPatient);
     } catch (err) {
       console.error('Erreur lors du chargement de la consultation:', err);
-      setError(err instanceof Error ? err : new Error('Erreur lors du chargement des données de la consultation.'));
+      setError(err instanceof Error ? err : new Error('Erreur lors du chargement des donn\'ees de la consultation.'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [clearError, handleAmplifyResponse, setError]);
+
+  useEffect(() => {
+    if (consultationId) {
+      fetchConsultation(consultationId);
+    }
+  }, [consultationId, fetchConsultation]);
 
   const updateConsultationField = async (entityId: string, fieldName: string, newValue: string | number | boolean | null | undefined) => {
     if (!consultation) return;
@@ -172,9 +175,8 @@ export default function ConsultationDetailPage() {
       }
 
       const response = await client.models.Consultation.update(updateData);
-      const updatedConsultation = handleAmplifyResponse(response);
-
-      if (!updatedConsultation) {
+      
+      if (!handleAmplifyResponse(response)) {
         if (!error) {
           setError(`Erreur lors de la mise à jour du champ '${fieldName}'.`);
         }
@@ -182,7 +184,9 @@ export default function ConsultationDetailPage() {
         throw new Error(`Erreur lors de la mise à jour du champ '${fieldName}'.`);
       }
       
-      setConsultation(updatedConsultation as ConsultationWithPatient);
+      // Re-fetch data to get the correct shape with relations
+      await fetchConsultation(entityId);
+
     } catch (err) {
       console.error(`Error in updateConsultationField for ${fieldName}:`, err);
       setConsultation(oldConsultationData);
@@ -254,6 +258,17 @@ export default function ConsultationDetailPage() {
       age--;
     }
     return age;
+  };
+
+  const translatePaymentMethod = (method: PaymentMethod | null | undefined) => {
+    if (!method) return 'N/A';
+    const translations: Record<PaymentMethod, string> = {
+      CHEQUE: 'Chèque',
+      VIREMENT: 'Virement',
+      ESPECES: 'Espèces',
+      CARTE_BANCAIRE: 'Carte bancaire',
+    };
+    return translations[method];
   };
 
   if (loading) {
@@ -559,6 +574,47 @@ export default function ConsultationDetailPage() {
                   Voir le dossier patient →
                 </Link>
               </div>
+            </div>
+          </div>
+
+          {/* Facturation */}
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+                Facturation
+              </h3>
+              {consultation.invoice ? (
+                <div>
+                  <div className="space-y-2 text-sm mb-4">
+                    <div>
+                      <span className="font-medium text-gray-500">Statut:</span>
+                      <span className={`ml-2 ${consultation.invoice.status === 'OVERDUE' ? 'text-red-600 font-bold' : 'text-gray-900'}`}>
+                        {translateStatus(consultation.invoice.status || 'DRAFT')}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-500">Paiement:</span>
+                      <span className="ml-2 text-gray-900">{translatePaymentMethod(consultation.invoice.paymentMethod)}</span>
+                    </div>
+                  </div>
+                  <Link
+                    href={`/invoices/${consultation.invoice.id}`}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    Voir la facture
+                  </Link>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm text-gray-500 mb-2">Aucune facture n&apos;est liée à cette consultation.</p>
+                  <button
+                    onClick={() => router.push(`/invoices/new?consultationId=${consultation.id}&patientId=${consultation.patient?.id}`)}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                  >
+                    Créer une facture
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

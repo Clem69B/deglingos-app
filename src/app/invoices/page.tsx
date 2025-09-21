@@ -1,79 +1,189 @@
 'use client';
 
-export default function InvoicesPage() {
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import useInvoiceManagement from '@/hooks/useInvoiceManagement';
+import PatientCombobox from '@/components/PatientCombobox';
+import ErrorAlert from '@/components/ErrorAlert';
+import { getStatusBadgeColor, translateStatus } from '@/lib/invoiceStatus';
+
+const InvoicesPage = () => {
+  const [error, setError] = React.useState<string | null>(null);
+  const { invoices, loading, listInvoices } = useInvoiceManagement({ onError: setError });
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const filter = selectedPatientId ? { patientId: selectedPatientId } : undefined;
+    listInvoices(filter);
+  }, [selectedPatientId, listInvoices]);
+
+  const clearFilters = () => {
+    setSelectedPatientId(null);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('fr-FR');
+  };
+
+
+
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="bg-white shadow-sm rounded-lg p-6">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 text-gray-400">
-            <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-            </svg>
-          </div>
-          <h3 className="mt-2 text-lg font-semibold text-gray-900">Facturation</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Cette section permettra de gérer la facturation et les paiements.
+    <div className="space-y-6">
+      {/* Affichage des erreurs */}
+      {error && (
+        <ErrorAlert 
+          error={error} 
+          title="Erreur lors de la récupération des factures" 
+        />
+      )}
+
+      {/* En-tête */}
+      <div className="page-header">
+        <div className="page-header-content">
+          <h2 className="page-title">
+            Factures
+          </h2>
+          <p className="page-subtitle">
+            Gérez vos factures et suivez les paiements
           </p>
-          <div className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-left">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h4 className="font-medium text-blue-900">Factures</h4>
-                <ul className="mt-2 text-sm text-blue-700 space-y-1">
-                  <li>• Créer une facture</li>
-                  <li>• Liste des factures</li>
-                  <li>• Factures impayées</li>
-                  <li>• Relances automatiques</li>
-                </ul>
-              </div>
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h4 className="font-medium text-green-900">Paiements</h4>
-                <ul className="mt-2 text-sm text-green-700 space-y-1">
-                  <li>• Enregistrer un paiement</li>
-                  <li>• Historique des paiements</li>
-                  <li>• Modes de paiement</li>
-                  <li>• Remboursements</li>
-                </ul>
-              </div>
-              <div className="bg-yellow-50 p-4 rounded-lg">
-                <h4 className="font-medium text-yellow-900">Statistiques</h4>
-                <ul className="mt-2 text-sm text-yellow-700 space-y-1">
-                  <li>• Chiffre d&apos;affaires</li>
-                  <li>• Revenus par mois</li>
-                  <li>• Taux d&apos;impayés</li>
-                  <li>• Graphiques</li>
-                </ul>
-              </div>
-              <div className="bg-purple-50 p-4 rounded-lg">
-                <h4 className="font-medium text-purple-900">Paramètres</h4>
-                <ul className="mt-2 text-sm text-purple-700 space-y-1">
-                  <li>• Tarifs par acte</li>
-                  <li>• TVA et taxes</li>
-                  <li>• Modèles de facture</li>
-                  <li>• Conditions de paiement</li>
-                </ul>
+        </div>
+      </div>
+
+      {/* Filtres de recherche */}
+      <div className="filter-card">
+        <div className="filter-card-content">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Filtre par patient */}
+            <div>
+              <label className="form-label">
+                Filtrer par patient
+              </label>
+              <div className="mt-1">
+                <PatientCombobox
+                  value={selectedPatientId || ''}
+                  onChange={setSelectedPatientId}
+                  placeholder="Rechercher un patient..."
+                />
               </div>
             </div>
-            
-            <div className="mt-8 bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-medium text-gray-900 mb-3">Aperçu des données</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">€0</div>
-                  <div className="text-sm text-gray-600">Revenus ce mois</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600">0</div>
-                  <div className="text-sm text-gray-600">Factures impayées</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">0</div>
-                  <div className="text-sm text-gray-600">Factures payées</div>
-                </div>
-              </div>
+          </div>
+
+          {/* Bouton pour effacer les filtres */}
+          {selectedPatientId && (
+            <div className="mt-4">
+              <button
+                onClick={clearFilters}
+                className="btn-secondary"
+              >
+                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Effacer les filtres
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Liste des factures */}
+      <div className="content-card">
+        {loading ? (
+          <div className="empty-state">
+            <div className="empty-state-text">Chargement des factures...</div>
+          </div>
+        ) : invoices.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-text">
+              {selectedPatientId ? 
+                'Aucune facture trouvée pour ce patient' : 
+                'Aucune facture enregistrée'
+              }
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Numéro
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Patient
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Statut
+                  </th>
+                  <th className="relative px-6 py-3">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {invoices.map((invoice) => (
+                  <tr key={invoice.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Link 
+                        href={`/invoices/${invoice.id}`} 
+                        className="text-indigo-600 hover:text-indigo-900 font-medium"
+                      >
+                        {invoice.invoiceNumber}
+                      </Link>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {invoice.patient ? 
+                          `${invoice.patient.firstName} ${invoice.patient.lastName}` : 
+                          'N/A'
+                        }
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {invoice.date ? formatDate(invoice.date) : 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {invoice.total?.toFixed(2)} €
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`badge ${getStatusBadgeColor(invoice.status || 'DRAFT')}`}>
+                        {translateStatus(invoice.status || 'DRAFT')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <Link 
+                        href={`/invoices/${invoice.id}`} 
+                        className="text-indigo-600 hover:text-indigo-900"
+                      >
+                        Détails
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Statistiques */}
+      {!loading && (
+        <div className="stats-card">
+          <div className="stats-card-content">
+            <div className="empty-state-text">
+              {invoices.length} facture(s) affichée(s)
+              {selectedPatientId && " pour le patient sélectionné"}
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
-}
+};
+
+export default InvoicesPage;

@@ -31,7 +31,7 @@ export default function Dashboard() {
         }),
         client.models.Invoice.list({
           filter: {
-            status: { eq: 'SENT' },
+            status: { eq: 'PENDING' },
           },
         }),
       ]);
