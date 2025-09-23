@@ -6,6 +6,7 @@ import { updateOverdueInvoices } from './functions/update-overdue-invoices/resou
 import { generateInvoicePdf } from './functions/generate-invoice-pdf/resource';
 import { sendInvoiceEmail } from './functions/send-invoice-email/resource';
 import { downloadInvoicePdf } from './functions/download-invoice-pdf/resource';
+import { PolicyStatement } from "aws-cdk-lib/aws-iam"
 
 export const backend = defineBackend({
   auth,
@@ -36,6 +37,14 @@ backend.sendInvoiceEmail.addEnvironment('AMPLIFY_STORAGE_BUCKET_NAME', backend.s
 backend.data.resources.tables['Invoice'].grantReadData(backend.sendInvoiceEmail.resources.lambda);
 backend.data.resources.tables['Patient'].grantReadData(backend.sendInvoiceEmail.resources.lambda);
 backend.storage.resources.bucket.grantRead(backend.sendInvoiceEmail.resources.lambda);
+
+// Authorize email function to send emails via SES
+const sesPolicy = new PolicyStatement({
+  sid: "AllowSESSendEmail",
+  actions: ['ses:SendEmail', 'ses:SendRawEmail'],
+  resources: ['*'],
+});
+backend.sendInvoiceEmail.resources.lambda.addToRolePolicy(sesPolicy);
 
 // Grant download function access to Invoice table and S3 storage
 backend.downloadInvoicePdf.addEnvironment('AMPLIFY_DATA_INVOICE_TABLE_NAME', backend.data.resources.tables['Invoice'].tableName);

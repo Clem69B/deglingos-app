@@ -1,4 +1,5 @@
-import { type AppSyncResolverHandler } from 'aws-lambda';
+import type { Schema } from '../../data/resource';
+import { env } from '$amplify/env/send-invoice-email'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { SESClient, SendRawEmailCommand } from '@aws-sdk/client-ses';
@@ -9,25 +10,7 @@ const docClient = DynamoDBDocumentClient.from(dynamoClient);
 const s3Client = new S3Client({});
 const sesClient = new SESClient({});
 
-interface Invoice {
-  id: string;
-  invoiceNumber: string;
-  patientId: string;
-  date: string;
-  total?: number;
-  price?: number;
-  status?: string;
-  notes?: string;
-}
-
-interface Patient {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email?: string;
-}
-
-export const handler: AppSyncResolverHandler<{ invoiceId: string; recipientEmail: string }, { success: boolean; message: string }> = async (event) => {
+export const handler: Schema["sendInvoiceEmail"]["functionHandler"] = async (event) => {
   console.log('Send Invoice Email event:', JSON.stringify(event, null, 2));
 
   try {
@@ -48,7 +31,7 @@ export const handler: AppSyncResolverHandler<{ invoiceId: string; recipientEmail
     }
 
     // Get invoice from DynamoDB
-    const invoiceTableName = process.env.AMPLIFY_DATA_INVOICE_TABLE_NAME;
+    const invoiceTableName = env.AMPLIFY_DATA_INVOICE_TABLE_NAME;
     if (!invoiceTableName) {
       throw new Error('Invoice table name not configured');
     }
@@ -65,10 +48,10 @@ export const handler: AppSyncResolverHandler<{ invoiceId: string; recipientEmail
       };
     }
 
-    const invoice = invoiceResponse.Item as Invoice;
+    const invoice = invoiceResponse.Item as Schema['Invoice']['type'];
 
     // Get patient details
-    const patientTableName = process.env.AMPLIFY_DATA_PATIENT_TABLE_NAME;
+    const patientTableName = env.AMPLIFY_DATA_PATIENT_TABLE_NAME;
     if (!patientTableName) {
       throw new Error('Patient table name not configured');
     }
@@ -78,10 +61,10 @@ export const handler: AppSyncResolverHandler<{ invoiceId: string; recipientEmail
       Key: { id: invoice.patientId }
     }));
 
-    const patient = patientResponse.Item as Patient | undefined;
+    const patient = patientResponse.Item as Schema['Patient']['type'] | undefined;
 
     // Get PDF from S3
-    const bucketName = process.env.AMPLIFY_STORAGE_BUCKET_NAME;
+    const bucketName = env.AMPLIFY_STORAGE_BUCKET_NAME;
     if (!bucketName) {
       throw new Error('Storage bucket name not configured');
     }
@@ -111,7 +94,7 @@ export const handler: AppSyncResolverHandler<{ invoiceId: string; recipientEmail
     }
 
     // Prepare email
-    const senderEmail = process.env.SES_SENDER_EMAIL || 'noreply@deglingos.com';
+    const senderEmail = env.SES_SENDER_EMAIL || 'noreply@deglingos.eu';
     const patientName = patient ? `${patient.firstName} ${patient.lastName}` : 'Cher patient';
     
     const subject = `Facture ${invoice.invoiceNumber}`;

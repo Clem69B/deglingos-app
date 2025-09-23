@@ -1,35 +1,15 @@
-import { type AppSyncResolverHandler } from 'aws-lambda';
+import type { Schema } from '../../data/resource';
+import { env } from '$amplify/env/generate-invoice-pdf'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 
 const dynamoClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
 const s3Client = new S3Client({});
 
-interface Invoice {
-  id: string;
-  invoiceNumber: string;
-  patientId: string;
-  date: string;
-  total?: number;
-  price?: number;
-  status?: string;
-  notes?: string;
-  dueDate?: string;
-}
-
-interface Patient {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-}
-
-export const handler: AppSyncResolverHandler<{ invoiceId: string }, { success: boolean; pdfUrl?: string; message: string }> = async (event) => {
+export const handler: Schema["generateInvoicePDF"]["functionHandler"] = async (event) => {
   console.log('Generate Invoice PDF event:', JSON.stringify(event, null, 2));
 
   try {
@@ -43,7 +23,7 @@ export const handler: AppSyncResolverHandler<{ invoiceId: string }, { success: b
     }
 
     // Get invoice from DynamoDB
-    const invoiceTableName = process.env.AMPLIFY_DATA_INVOICE_TABLE_NAME;
+    const invoiceTableName = env.AMPLIFY_DATA_INVOICE_TABLE_NAME;
     if (!invoiceTableName) {
       throw new Error('Invoice table name not configured');
     }
@@ -60,10 +40,11 @@ export const handler: AppSyncResolverHandler<{ invoiceId: string }, { success: b
       };
     }
 
-    const invoice = invoiceResponse.Item as Invoice;
+    const invoice = invoiceResponse.Item as Schema['Invoice']['type'];
+    console.log('Invoice data:', invoice);
 
     // Get patient details
-    const patientTableName = process.env.AMPLIFY_DATA_PATIENT_TABLE_NAME;
+    const patientTableName = env.AMPLIFY_DATA_PATIENT_TABLE_NAME;
     if (!patientTableName) {
       throw new Error('Patient table name not configured');
     }
@@ -73,10 +54,13 @@ export const handler: AppSyncResolverHandler<{ invoiceId: string }, { success: b
       Key: { id: invoice.patientId }
     }));
 
-    const patient = patientResponse.Item as Patient | undefined;
+    const patient = patientResponse.Item as Schema['Patient']['type'] | undefined;
+    console.log('Patient data:', patient);
 
     // Generate PDF
     const pdf = new jsPDF();
+
+    console.log('Generating PDF content...');
     
     // Add title
     pdf.setFontSize(20);
@@ -120,7 +104,7 @@ export const handler: AppSyncResolverHandler<{ invoiceId: string }, { success: b
     const pdfBuffer = Buffer.from(pdf.output('arraybuffer'));
 
     // Upload to S3
-    const bucketName = process.env.AMPLIFY_STORAGE_BUCKET_NAME;
+    const bucketName = env.AMPLIFY_STORAGE_BUCKET_NAME;
     if (!bucketName) {
       throw new Error('Storage bucket name not configured');
     }
@@ -147,7 +131,9 @@ export const handler: AppSyncResolverHandler<{ invoiceId: string }, { success: b
     console.error('Error generating PDF:', error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Unknown error occurred'
+      message: error instanceof Error
+      ? `${error.message}${error.stack ? `\n\nStack: ${error.stack}` : ''}`
+      : 'Unknown error occurred'
     };
   }
 };

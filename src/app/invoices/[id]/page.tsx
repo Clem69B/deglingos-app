@@ -35,7 +35,7 @@ const InvoiceDetailPage = () => {
       </div>
 
       {loading && <p>Chargement...</p>}
-      {error && <ErrorAlert error={error} title="Erreur lors de la récupération de la facture." />}
+      {error && <ErrorAlert error={error} />}
       
       {invoice && !loading && (
         <InvoiceDetails 

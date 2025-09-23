@@ -27,7 +27,7 @@ const InvoiceDetails = ({
   downloadInvoicePDF,
   isUpdatingStatus,
 }: InvoiceDetailsProps) => {
-  
+
   const handleUpdate = async (_entityId: string, fieldName: string, value: unknown) => {
     try {
       await updateField(fieldName, value);
@@ -92,46 +92,48 @@ const InvoiceDetails = ({
             {/* Send (mark pending) visible when DRAFT */}
             {invoice.status === 'DRAFT' && (
               <button
-                className="btn btn-secondary"
+                className="btn btn-primary"
                 onClick={onMarkPending}
                 disabled={isUpdatingStatus}
               >
-                {isUpdatingStatus ? 'Mise à jour...' : 'Facture en attente'}
+                {isUpdatingStatus ? 'Mise à jour...' : 'Valider la facture'}
               </button>
             )}
 
             {/* Print button - disabled when DRAFT */}
-            <button
+            {invoice.status !== 'DRAFT' && (<button
               className="btn btn-secondary"
               onClick={onPrintInvoice}
-              disabled={invoice.status === 'DRAFT'}
             >
               Impression
             </button>
+            )}
 
             {/* Send email button - disabled when DRAFT or no patient email */}
-            <button
+            {invoice.status !== 'DRAFT' && (<button
               className="btn btn-secondary"
               onClick={onSendEmail}
-              disabled={invoice.status === 'DRAFT' || !invoice.patient?.email}
+              disabled={!invoice.patient?.email}
             >
               Envoyé par email
             </button>
+            )}
 
             {/* Paid/unpaid toggle */}
-            <button 
+            {invoice.status !== 'DRAFT' && (<button
               className="btn btn-primary"
               onClick={onTogglePaid}
               disabled={isUpdatingStatus}
             >
               {isUpdatingStatus ? 'Mise à jour...' : (invoice.isPaid ? 'Marquer comme non payée' : 'Marquer comme payée')}
             </button>
+            )}
           </div>
         </div>
       </div>
       <div className="detail-content">
         <dl className="sm:divide-y sm:divide-gray-200 grid grid-cols-1 sm:grid-cols-2">
-          
+
           <div className="detail-section">
             <dt className="detail-label">Patient</dt>
             <dd className="detail-value">

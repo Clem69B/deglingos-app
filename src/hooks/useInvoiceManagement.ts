@@ -190,7 +190,6 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
       const updateInput: UpdateInvoiceInput = {
         id,
         [fieldName]: value,
-        updatedAt,
       };
 
       // Include status reset in the update if needed
@@ -333,9 +332,10 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
       const { data, errors } = await client.mutations.generateInvoicePDF({ invoiceId: id });
       if (errors) throw errors;
       
-      const result = data as { success: boolean; pdfUrl?: string; message: string };
+      const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+      const result = parsedData as { success: boolean; pdfUrl?: string; message: string };
       if (!result.success) {
-        throw new Error(result.message);
+        throw new Error(`PDF generation failed: ${result.message}`);
       }
       
       return result.pdfUrl || null;
@@ -351,10 +351,11 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
     try {
       const { data, errors } = await client.mutations.downloadInvoicePDF({ invoiceId: id });
       if (errors) throw errors;
-      
-      const result = data as { success: boolean; downloadUrl?: string; message: string };
+
+      const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+      const result = parsedData as { success: boolean; downloadUrl?: string; message: string };
       if (!result.success) {
-        throw new Error(result.message);
+        throw new Error(`PDF download failed: ${result.message}`);
       }
       
       if (result.downloadUrl) {
@@ -390,9 +391,10 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
       });
       if (errors) throw errors;
       
-      const result = data as { success: boolean; message: string };
+      const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+      const result = parsedData as { success: boolean; message: string };
       if (!result.success) {
-        throw new Error(result.message);
+        throw new Error(`Invoice email sending failed: ${result.message}`);
       }
     } catch (err) {
       handleError(err);

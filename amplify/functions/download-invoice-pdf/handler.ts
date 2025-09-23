@@ -1,4 +1,5 @@
-import { type AppSyncResolverHandler } from 'aws-lambda';
+import type { Schema } from '../../data/resource';
+import { env } from '$amplify/env/download-invoice-pdf'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { S3Client, GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -8,13 +9,7 @@ const dynamoClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
 const s3Client = new S3Client({});
 
-interface Invoice {
-  id: string;
-  invoiceNumber: string;
-  status?: string;
-}
-
-export const handler: AppSyncResolverHandler<{ invoiceId: string }, { success: boolean; downloadUrl?: string; message: string }> = async (event) => {
+export const handler: Schema["downloadInvoicePDF"]["functionHandler"] = async (event) => {
   console.log('Download Invoice PDF event:', JSON.stringify(event, null, 2));
 
   try {
@@ -28,7 +23,7 @@ export const handler: AppSyncResolverHandler<{ invoiceId: string }, { success: b
     }
 
     // Get invoice from DynamoDB
-    const invoiceTableName = process.env.AMPLIFY_DATA_INVOICE_TABLE_NAME;
+    const invoiceTableName = env.AMPLIFY_DATA_INVOICE_TABLE_NAME;
     if (!invoiceTableName) {
       throw new Error('Invoice table name not configured');
     }
@@ -45,7 +40,7 @@ export const handler: AppSyncResolverHandler<{ invoiceId: string }, { success: b
       };
     }
 
-    const invoice = invoiceResponse.Item as Invoice;
+    const invoice = invoiceResponse.Item as Schema['Invoice']['type'];
 
     // Check if invoice status allows PDF download
     if (invoice.status === 'DRAFT') {
@@ -56,7 +51,7 @@ export const handler: AppSyncResolverHandler<{ invoiceId: string }, { success: b
     }
 
     // Check if PDF exists in S3
-    const bucketName = process.env.AMPLIFY_STORAGE_BUCKET_NAME;
+    const bucketName = env.AMPLIFY_STORAGE_BUCKET_NAME;
     if (!bucketName) {
       throw new Error('Storage bucket name not configured');
     }
