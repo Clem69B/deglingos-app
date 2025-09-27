@@ -6,5 +6,9 @@ export const storage = defineStorage({
     'patient_attachments/*': [
       allow.groups(['osteopaths']).to(['read', 'write', 'delete'])
     ],
+    'invoices/*': [
+      allow.groups(['osteopaths']).to(['read', 'write', 'delete']),
+      allow.groups(['assistants']).to(['read'])
+    ],
   }),
 });

@@ -4,6 +4,9 @@ import { listUsers } from '../functions/list-users/resource';
 import { createUser } from '../functions/create-user/resource';
 import { deleteUser } from '../functions/delete-user/resource';
 import { manageUserGroups } from '../functions/manage-user-groups/resource';
+import { generateInvoicePdf } from '../functions/generate-invoice-pdf/resource';
+import { sendInvoiceEmail } from '../functions/send-invoice-email/resource';
+import { downloadInvoicePdf } from '../functions/download-invoice-pdf/resource';
 
 const schema = a.schema({
   // Patient Model
@@ -211,6 +214,31 @@ const schema = a.schema({
     .authorization((allow) => [allow.group('admins')])
     .handler(a.handler.function(manageUserGroups))
     .returns(a.ref('UserMutationResponseType')),
+
+  // Invoice PDF Management Mutations
+  generateInvoicePDF: a
+    .mutation()
+    .arguments({ invoiceId: a.string().required() })
+    .returns(a.json())
+    .authorization((allow) => [allow.authenticated()])
+    .handler(a.handler.function(generateInvoicePdf)),
+
+  sendInvoiceEmail: a
+    .mutation()
+    .arguments({ 
+      invoiceId: a.string().required(),
+      recipientEmail: a.string().required() 
+    })
+    .returns(a.json())
+    .authorization((allow) => [allow.authenticated()])
+    .handler(a.handler.function(sendInvoiceEmail)),
+
+  downloadInvoicePDF: a
+    .mutation()
+    .arguments({ invoiceId: a.string().required() })
+    .returns(a.json())
+    .authorization((allow) => [allow.authenticated()])
+    .handler(a.handler.function(downloadInvoicePdf)),
 });
 
 export type Schema = ClientSchema<typeof schema>;
