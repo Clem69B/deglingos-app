@@ -171,11 +171,9 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
     if (!invoice) throw new Error('Invoice not loaded');
 
     const oldInvoice = { ...invoice };
-    const updatedAt = new Date().toISOString();
     const updatedInvoice: Invoice = {
       ...invoice,
       [fieldName]: value,
-      updatedAt,
     };
 
     // Reset status to DRAFT if modifying total field and not currently DRAFT or PAID
