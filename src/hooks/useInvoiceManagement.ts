@@ -171,22 +171,31 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
     if (!invoice) throw new Error('Invoice not loaded');
 
     const oldInvoice = { ...invoice };
-    const updatedAt = new Date().toISOString();
     const updatedInvoice: Invoice = {
       ...invoice,
       [fieldName]: value,
-      updatedAt,
     };
+
+    // Reset status to DRAFT if modifying total field and not currently DRAFT or PAID
+    if (fieldName === 'total' && invoice.status !== 'DRAFT' && invoice.status !== 'PAID') {
+      updatedInvoice.status = 'DRAFT';
+    }
 
     // Optimistic update
     updateLocalCaches(updatedInvoice);
 
     try {
-      const result = await updateInvoice({
+      const updateInput: UpdateInvoiceInput = {
         id,
         [fieldName]: value,
-        updatedAt,
-      } as UpdateInvoiceInput);
+      };
+
+      // Include status reset in the update if needed
+      if (fieldName === 'total' && invoice.status !== 'DRAFT' && invoice.status !== 'PAID') {
+        updateInput.status = 'DRAFT';
+      }
+
+      const result = await updateInvoice(updateInput);
       if (!result) throw new Error('Update failed');
       updateLocalCaches(result);
       return result;
@@ -228,6 +237,16 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
       } as UpdateInvoiceInput);
       if (!result) throw new Error('Update failed');
       updateLocalCaches(result);
+
+      // Generate PDF when transitioning from DRAFT to PENDING
+      if (oldInvoice.status === 'DRAFT') {
+        try {
+          await generateInvoicePDF(id);
+        } catch (pdfError) {
+          console.warn('PDF generation failed but status was updated:', pdfError);
+          // Don't revert status change if PDF generation fails
+        }
+      }
     } catch (err) {
       updateLocalCaches(oldInvoice);
       handleError(err);
@@ -304,7 +323,55 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
     }
   };
 
-  // Trigger backend email send (calls a Next.js API route that will proxy to an actual mailer / lambda)
+  // Generate PDF and store in S3
+  const generateInvoicePDF = async (id: string): Promise<string | null> => {
+    onError('');
+    try {
+      const { data, errors } = await client.mutations.generateInvoicePDF({ invoiceId: id });
+      if (errors) throw errors;
+      
+      const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+      const result = parsedData as { success: boolean; pdfUrl?: string; message: string };
+      if (!result.success) {
+        throw new Error(`PDF generation failed: ${result.message}`);
+      }
+      
+      return result.pdfUrl || null;
+    } catch (err) {
+      handleError(err);
+      throw err;
+    }
+  };
+
+  // Download PDF from S3 for printing
+  const downloadInvoicePDF = async (id: string): Promise<void> => {
+    onError('');
+    try {
+      const { data, errors } = await client.mutations.downloadInvoicePDF({ invoiceId: id });
+      if (errors) throw errors;
+
+      const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+      const result = parsedData as { success: boolean; downloadUrl?: string; message: string };
+      if (!result.success) {
+        throw new Error(`PDF download failed: ${result.message}`);
+      }
+      
+      if (result.downloadUrl) {
+        // Trigger browser download
+        const link = document.createElement('a');
+        link.href = result.downloadUrl;
+        link.download = ''; // Let the server determine filename
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (err) {
+      handleError(err);
+      throw err;
+    }
+  };
+
+  // Send invoice email with PDF attachment
   const sendInvoiceEmail = async (id: string) => {
     onError('');
     try {
@@ -315,8 +382,18 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
       const email = current.patient?.email;
       if (!email) throw new Error('No patient email found for this invoice');
 
-      // Fonction d'envoi non implémentée — lever une erreur explicite
-      throw new Error("Fonction d'envoi d'email non disponible pour le moment.");
+      // Call GraphQL mutation to send email with PDF
+      const { data, errors } = await client.mutations.sendInvoiceEmail({ 
+        invoiceId: id,
+        recipientEmail: email 
+      });
+      if (errors) throw errors;
+      
+      const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+      const result = parsedData as { success: boolean; message: string };
+      if (!result.success) {
+        throw new Error(`Invoice email sending failed: ${result.message}`);
+      }
     } catch (err) {
       handleError(err);
       throw err;
@@ -338,6 +415,9 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
     markAsPaid,
     unmarkAsPaid,
     sendInvoiceEmail,
+    // PDF functions
+    generateInvoicePDF,
+    downloadInvoicePDF,
   };
 };
 
