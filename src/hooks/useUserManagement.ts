@@ -128,7 +128,7 @@ export const useUserManagement = () => {
       setError(null);
 
       console.log('🔄 Adding user to group:', { userId, groupName });
-      const response = await client.mutations.addUserToGroup({ userId, groupName });
+      const response = await client.mutations.manageUserGroups({ action: 'add', userId, groupName });
 
       if (response.data) {
         console.log('✅ User added to group:', response.data);
@@ -152,7 +152,7 @@ export const useUserManagement = () => {
       setError(null);
 
       console.log('🔄 Removing user from group:', { userId, groupName });
-      const response = await client.mutations.removeUserFromGroup({ userId, groupName });
+      const response = await client.mutations.manageUserGroups({ action: 'remove', userId, groupName });
 
       if (response.data) {
         console.log('✅ User removed from group:', response.data);

@@ -12,7 +12,7 @@ export const handler = async (event: any) => {
   try {
     console.log('createUser event:', JSON.stringify(event, null, 2));
     
-    const { email, givenName, familyName, phoneNumber, groups = ['assistants'] } = event.arguments;
+    const { email, givenName, familyName, phoneNumber, groups } = event.arguments;
     
     // Validation des groupes autorisés
     const validGroups = ['osteopaths', 'assistants', 'admins'];
