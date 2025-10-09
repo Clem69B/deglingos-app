@@ -156,7 +156,11 @@ const schema = a.schema({
   getUserDetails: a
     .query()
     .arguments({ userId: a.string().required() })
-    .authorization((allow) => [allow.group('osteopaths')])
+    .authorization((allow) => [
+      allow.group('osteopaths'), 
+      allow.group('assistants'), 
+      allow.group('admins')
+    ])
     .handler(a.handler.function(getUserDetails))
     .returns(a.ref('UserDetailsType')),
 
@@ -195,9 +199,10 @@ const schema = a.schema({
     .handler(a.handler.function(deleteUser))
     .returns(a.ref('UserMutationResponseType')),
 
-  addUserToGroup: a
+  manageUserGroups: a
     .mutation()
     .arguments({
+      action: a.enum(['add', 'remove']),
       userId: a.string().required(),
       groupName: a.string().required()
     })

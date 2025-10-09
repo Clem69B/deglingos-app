@@ -1,3 +1,4 @@
+import type { Schema } from '../../data/resource';
 import { env } from '$amplify/env/manage-user-groups';
 import {
   AdminAddUserToGroupCommand,
@@ -7,27 +8,32 @@ import {
 
 const client = new CognitoIdentityProviderClient();
 
-export const handler = async (event: any) => {
+export const handler: Schema["manageUserGroups"]["functionHandler"] = async (event) => {
   try {
     console.log('manageUserGroups event:', JSON.stringify(event, null, 2));
     
-    const { fieldName } = event.info;
-    const { userId, groupName } = event.arguments;
-    
-    if (!userId || !groupName) {
-      throw new Error('userId and groupName are required');
+    const { action, userId, groupName } = event.arguments;
+
+    if (!action || !userId || !groupName) {
+      throw new Error('action, userId and groupName are required');
     }
-    
-    // Validation des groupes autorisés
+
+    // Validate action
+    const validActions = ['add', 'remove'];
+    if (!validActions.includes(action)) {
+      throw new Error(`Invalid action: ${action}. Valid actions are: ${validActions.join(', ')}`);
+    }
+
+    // Validate group name
     const validGroups = ['osteopaths', 'assistants', 'admins'];
     if (!validGroups.includes(groupName)) {
       throw new Error(`Invalid group: ${groupName}. Valid groups are: ${validGroups.join(', ')}`);
     }
     
     let result;
-    
-    switch (fieldName) {
-      case 'addUserToGroup':
+
+    switch (action) {
+      case 'add':
         const addCommand = new AdminAddUserToGroupCommand({
           UserPoolId: env.AMPLIFY_AUTH_USERPOOL_ID,
           Username: userId,
@@ -41,8 +47,8 @@ export const handler = async (event: any) => {
           message: `User ${userId} added to group ${groupName} successfully`,
         };
         break;
-        
-      case 'removeUserFromGroup':
+
+      case 'remove':
         const removeCommand = new AdminRemoveUserFromGroupCommand({
           UserPoolId: env.AMPLIFY_AUTH_USERPOOL_ID,
           Username: userId,
@@ -58,7 +64,7 @@ export const handler = async (event: any) => {
         break;
         
       default:
-        throw new Error(`Unknown field: ${fieldName}`);
+        throw new Error(`Unknown action: ${action}`);
     }
     
     console.log('manageUserGroups result:', JSON.stringify(result, null, 2));
