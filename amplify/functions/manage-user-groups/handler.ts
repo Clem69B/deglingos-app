@@ -13,12 +13,18 @@ export const handler: Schema["manageUserGroups"]["functionHandler"] = async (eve
     console.log('manageUserGroups event:', JSON.stringify(event, null, 2));
     
     const { action, userId, groupName } = event.arguments;
-    
-    if (!userId || !groupName) {
-      throw new Error('userId and groupName are required');
+
+    if (!action || !userId || !groupName) {
+      throw new Error('action, userId and groupName are required');
     }
-    
-    // Validation des groupes autorisés
+
+    // Validate action
+    const validActions = ['add', 'remove'];
+    if (!validActions.includes(action)) {
+      throw new Error(`Invalid action: ${action}. Valid actions are: ${validActions.join(', ')}`);
+    }
+
+    // Validate group name
     const validGroups = ['osteopaths', 'assistants', 'admins'];
     if (!validGroups.includes(groupName)) {
       throw new Error(`Invalid group: ${groupName}. Valid groups are: ${validGroups.join(', ')}`);
