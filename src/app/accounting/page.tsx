@@ -9,7 +9,7 @@ import ErrorAlert from '../../components/ErrorAlert';
 
 export default function AccountingPage() {
   const [error, setError] = useState<string>('');
-  const { monthlyData, loading, getMonthlyRevenue, getCurrentMonthRevenue } = useAccountingData({
+  const { monthlyData, loading, getMonthlyRevenue } = useAccountingData({
     onError: setError,
   });
   const { hasAnyGroup, loading: permissionsLoading } = useUserPermissions();
@@ -55,8 +55,6 @@ export default function AccountingPage() {
     );
   }
 
-  const currentMonthData = getCurrentMonthRevenue();
-
   return (
     <div className="space-y-6">
       <div className="page-header">
@@ -70,24 +68,27 @@ export default function AccountingPage() {
 
       {error && (
         <ErrorAlert 
-          message={error} 
+          error={error} 
           onClose={() => setError('')}
         />
       )}
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-7 gap-4">
         {/* Revenue Chart - Full width top */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-7">
           <RevenueChart data={monthlyData} loading={loading} />
         </div>
         
         {/* Monthly Summary - Left */}
-        <div className="lg:col-span-1">
-          <MonthlyRevenueSummary data={currentMonthData} loading={loading} />
+        <div className="lg:col-span-3">
+          <MonthlyRevenueSummary 
+            monthlyData={monthlyData} 
+            loading={loading} 
+          />
         </div>
         
         {/* Check Tracker - Right */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-4">
           <div className="form-card">
             <div className="card-header">
               <h3 className="card-title">Chèques non encaissés</h3>
