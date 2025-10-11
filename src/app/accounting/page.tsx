@@ -1,10 +1,26 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
+import { useAccountingData } from '../../hooks/useAccountingData';
+import RevenueChart from './components/RevenueChart';
+import MonthlyRevenueSummary from './components/MonthlyRevenueSummary';
+import ErrorAlert from '../../components/ErrorAlert';
 
 export default function AccountingPage() {
+  const [error, setError] = useState<string>('');
+  const { monthlyData, loading, getMonthlyRevenue, getCurrentMonthRevenue } = useAccountingData({
+    onError: setError,
+  });
   const { hasAnyGroup, loading: permissionsLoading } = useUserPermissions();
   const canViewAccounting = hasAnyGroup(['osteopaths', 'assistants', 'admins']);
+
+  // Fetch revenue data on mount
+  useEffect(() => {
+    if (canViewAccounting && !permissionsLoading) {
+      getMonthlyRevenue(6);
+    }
+  }, [canViewAccounting, permissionsLoading, getMonthlyRevenue]);
 
   if (permissionsLoading) {
     return (
@@ -39,6 +55,8 @@ export default function AccountingPage() {
     );
   }
 
+  const currentMonthData = getCurrentMonthRevenue();
+
   return (
     <div className="space-y-6">
       <div className="page-header">
@@ -49,63 +67,23 @@ export default function AccountingPage() {
           </p>
         </div>
       </div>
+
+      {error && (
+        <ErrorAlert 
+          message={error} 
+          onClose={() => setError('')}
+        />
+      )}
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Revenue Chart - Full width top */}
         <div className="lg:col-span-3">
-          <div className="form-card h-64">
-            <div className="card-header">
-              <h3 className="card-title">Revenus (6 derniers mois)</h3>
-              <div className="card-subtitle">
-                En cours de développement
-              </div>
-            </div>
-            <div className="flex items-center justify-center h-40 bg-gray-50 rounded-lg">
-              <div className="empty-state">
-                <svg 
-                  className="mx-auto h-12 w-12 text-gray-400" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  strokeWidth={1.5} 
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M2.25 18L9 11.25l4.306 4.306a11.95 11.95 0 5 15.814-5.518l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.94"
-                  />
-                </svg>
-                <p className="empty-state-text">Graphique des revenus à venir</p>
-              </div>
-            </div>
-          </div>
+          <RevenueChart data={monthlyData} loading={loading} />
         </div>
         
         {/* Monthly Summary - Left */}
         <div className="lg:col-span-1">
-          <div className="form-card">
-            <div className="card-header">
-              <h3 className="card-title">Résumé mensuel</h3>
-            </div>
-            <div className="space-y-4">
-              <div className="empty-state">
-                <svg 
-                  className="mx-auto h-10 w-10 text-gray-400" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  strokeWidth={1.5} 
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
-                  />
-                </svg>
-                <p className="empty-state-text">Statistiques mensuelles à venir</p>
-              </div>
-            </div>
-          </div>
+          <MonthlyRevenueSummary data={currentMonthData} loading={loading} />
         </div>
         
         {/* Check Tracker - Right */}
