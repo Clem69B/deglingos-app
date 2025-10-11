@@ -198,10 +198,10 @@ const InvoiceDetails = ({
               updateFunction={handleUpdate}
               inputType="select"
               options={[
-                { value: 'CHEQUE', label: 'Chèque' },
-                { value: 'VIREMENT', label: 'Virement' },
-                { value: 'ESPECES', label: 'Espèces' },
-                { value: 'CARTE_BANCAIRE', label: 'Carte Bancaire' },
+                { value: 'CHECK', label: 'Chèque' },
+                { value: 'BANK_TRANSFER', label: 'Virement' },
+                { value: 'CASH', label: 'Espèces' },
+                { value: 'CARD', label: 'Carte Bancaire' },
               ]}
             />
           </div>

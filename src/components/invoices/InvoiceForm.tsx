@@ -27,7 +27,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ consultationId, patientId, on
     dueDate: '',
     price: 55, // Default amount is 55
     status: 'DRAFT', // Status is always DRAFT on creation
-    paymentMethod: 'VIREMENT',
+    paymentMethod: 'BANK_TRANSFER',
     notes: '',
     patientId: '',
     consultationId: null,
@@ -121,7 +121,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ consultationId, patientId, on
       price: formData.price || 0,
       total: formData.price || 0, // Total is the same as price
       status: formData.status || 'DRAFT',
-      paymentMethod: formData.paymentMethod || 'VIREMENT',
+  paymentMethod: formData.paymentMethod || 'BANK_TRANSFER',
       notes: formData.notes || null,
       isPaid: formData.status === 'PAID',
       paidAt: formData.status === 'PAID' ? new Date().toISOString() : null,
@@ -221,10 +221,10 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ consultationId, patientId, on
               onChange={handleChange}
               className="form-input"
             >
-              <option value="VIREMENT">Virement</option>
-              <option value="CHEQUE">Chèque</option>
-              <option value="ESPECES">Espèces</option>
-              <option value="CARTE_BANCAIRE">Carte Bancaire</option>
+              <option value="BANK_TRANSFER">Virement</option>
+              <option value="CHECK">Chèque</option>
+              <option value="CASH">Espèces</option>
+              <option value="CARD">Carte Bancaire</option>
             </select>
           </div>
         </div>
