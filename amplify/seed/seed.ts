@@ -154,7 +154,7 @@ if (consultations.data && consultations.data.length > 0) {
 
     const price = Math.floor(Math.random() * (100 - 50 + 1) + 50); // Random price between 50 and 100
     const isPaid = Math.random() > 0.5;
-    const paymentMethod = ['CHEQUE', 'VIREMENT', 'ESPECES', 'CARTE_BANCAIRE'][Math.floor(Math.random() * 4)] as 'CHEQUE' | 'VIREMENT' | 'ESPECES' | 'CARTE_BANCAIRE';
+    const paymentMethod = ['CHECK', 'BANK_TRANSFER', 'CASH', 'CARD'][Math.floor(Math.random() * 4)] as 'CHECK' | 'BANK_TRANSFER' | 'CASH' | 'CARD';
     
     const response = await dataClient.models.Invoice.create({
       patientId: consultation.patientId,
@@ -166,7 +166,7 @@ if (consultations.data && consultations.data.length > 0) {
       isPaid: isPaid,
       status: isPaid ? 'PAID' : ['DRAFT', 'PENDING', 'OVERDUE'][Math.floor(Math.random() * 3)] as 'DRAFT' | 'PENDING' | 'OVERDUE',
       paymentMethod: paymentMethod,
-      paymentReference: (paymentMethod === 'CHEQUE' || paymentMethod === 'VIREMENT') ? `Ref-${Math.random().toString(36).substring(2, 9)}` : undefined,
+      paymentReference: (paymentMethod === 'CHECK' || paymentMethod === 'BANK_TRANSFER') ? `Ref-${Math.random().toString(36).substring(2, 9)}` : undefined,
       paidAt: isPaid ? new Date().toISOString() : undefined,
       notes: `Sample invoice note: ${Math.random().toString(36).substring(2, 15)}`,
       createdAt: new Date().toISOString(),

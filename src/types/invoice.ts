@@ -4,7 +4,7 @@ import { PatientSummary } from './patient';
 import { ConsultationSummary } from './consultation';
 
 // Enum pour les méthodes de paiement
-export type PaymentMethod = 'CHEQUE' | 'VIREMENT' | 'ESPECES' | 'CARTE_BANCAIRE';
+export type PaymentMethod = 'CHECK' | 'BANK_TRANSFER' | 'CASH' | 'CARD';
 
 // Interface de base pour les factures
 export interface InvoiceBaseData {
