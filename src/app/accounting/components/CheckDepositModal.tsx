@@ -83,9 +83,9 @@ const CheckDepositModal: React.FC<CheckDepositModalProps> = ({
                   </div>
                   <div className="text-gray-600 text-xs">
                     Facture {check.invoiceNumber}
-                    {check.notes && (
+                    {check.paymentReference && (
                       <span className="ml-2 text-gray-500">
-                        • {check.notes.length > 50 ? `${check.notes.substring(0, 50)}...` : check.notes}
+                        • {check.paymentReference.length > 50 ? `${check.paymentReference.substring(0, 50)}...` : check.paymentReference}
                       </span>
                     )}
                   </div>

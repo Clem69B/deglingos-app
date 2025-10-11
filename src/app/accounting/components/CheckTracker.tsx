@@ -31,7 +31,7 @@ const CheckTracker: React.FC<CheckTrackerProps> = ({ onError }) => {
         check.patient?.firstName?.toLowerCase().includes(term) ||
         check.patient?.lastName?.toLowerCase().includes(term) ||
         check.invoiceNumber.toLowerCase().includes(term) ||
-        check.notes?.toLowerCase().includes(term) ||
+        check.paymentReference?.toLowerCase().includes(term) ||
         check.total?.toString().includes(term)
     );
   }, [undepositedChecks, searchTerm]);
@@ -151,14 +151,21 @@ const CheckTracker: React.FC<CheckTrackerProps> = ({ onError }) => {
             <p className="empty-state-text">Aucun chèque trouvé pour &quot;{searchTerm}&quot;</p>
           </div>
         )}
+
+
+        <div className="mt-4">
+          <CheckDepositModal
+            isOpen={isModalOpen}
+            selectedChecks={selectedChecks}
+            onClose={handleCloseModal}
+            onConfirm={handleConfirmDeposit}
+          />
+        </div>
+        
+
       </div>
 
-      <CheckDepositModal
-        isOpen={isModalOpen}
-        selectedChecks={selectedChecks}
-        onClose={handleCloseModal}
-        onConfirm={handleConfirmDeposit}
-      />
+
     </>
   );
 };

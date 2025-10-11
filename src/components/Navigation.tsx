@@ -13,7 +13,7 @@ const navigation = [
   { name: 'Consultations', href: '/consultations', icon: ClipboardDocumentListIcon },
   { name: 'Facturation', href: '/invoices', icon: DocumentTextIcon },
   { name: 'Comptabilité', href: '/accounting', icon: ChartBarIcon },
-  { name: 'Agenda', href: '/appointments', icon: CalendarDaysIcon },
+/*  { name: 'Agenda', href: '/appointments', icon: CalendarDaysIcon }, */
   { name: 'Paramètres', href: '/settings', icon: CogIcon },
 ];
 

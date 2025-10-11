@@ -74,14 +74,14 @@ export default function AccountingPage() {
         />
       )}
       
-      <div className="grid grid-cols-1 lg:grid-cols-7 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Revenue Chart - Full width top */}
-        <div className="lg:col-span-7">
+        <div className="lg:col-span-3">
           <RevenueChart data={monthlyData} loading={loading} />
         </div>
         
         {/* Monthly Summary - Left */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-1">
           <MonthlyRevenueSummary 
             monthlyData={monthlyData} 
             loading={loading} 
@@ -89,7 +89,7 @@ export default function AccountingPage() {
         </div>
         
         {/* Check Tracker - Right */}
-        <div className="lg:col-span-4">
+        <div className="lg:col-span-2">
           <CheckTracker onError={setError} />
         </div>
       </div>

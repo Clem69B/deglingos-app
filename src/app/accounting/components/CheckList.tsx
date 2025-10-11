@@ -87,7 +87,7 @@ const CheckList: React.FC<CheckListProps> = ({
             <th>N° Facture</th>
             <th className="text-right">Montant</th>
             <th>Date facture</th>
-            <th>Notes (Chèque)</th>
+            <th>Référence</th>
             <th className="text-center">Actions</th>
           </tr>
         </thead>
@@ -118,20 +118,13 @@ const CheckList: React.FC<CheckListProps> = ({
                 <td className="text-right">
                   <span className="font-medium">{check.total?.toFixed(2)}€</span>
                 </td>
-                <td>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">{formatDate(check.date)}</span>
-                    {isOld && (
-                      <span className="badge badge-warning badge-xs" title="Chèque de plus de 30 jours">
-                        Ancien
-                      </span>
-                    )}
-                  </div>
+                <td className="text-right">
+                  <span className="text-sm">{formatDate(check.date)}</span>
                 </td>
-                <td>
+                <td className="text-right">
                   <span className="text-sm text-gray-600">
-                    {check.notes ? (
-                      check.notes.length > 40 ? `${check.notes.substring(0, 40)}...` : check.notes
+                    {check.paymentReference ? (
+                      check.paymentReference.length > 40 ? `${check.paymentReference.substring(0, 40)}...` : check.paymentReference
                     ) : (
                       '-'
                     )}
