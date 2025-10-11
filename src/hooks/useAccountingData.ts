@@ -77,16 +77,16 @@ export const useAccountingData = ({ onError }: UseAccountingDataOptions) => {
         
         if (!aggregated[month]) {
           aggregated[month] = {
-            month,
-            total: 0,
-            paymentMethods: {
-              CHEQUE: 0,
-              VIREMENT: 0,
-              ESPECES: 0,
-              CARTE_BANCAIRE: 0,
-            },
-            invoiceCount: 0,
-          };
+              month,
+              total: 0,
+              paymentMethods: {
+                CHECK: 0,
+                BANK_TRANSFER: 0,
+                CASH: 0,
+                CARD: 0,
+              },
+              invoiceCount: 0,
+            };
         }
 
         aggregated[month].total += invoice.total;
@@ -117,10 +117,10 @@ export const useAccountingData = ({ onError }: UseAccountingDataOptions) => {
             month: monthKey,
             total: 0,
             paymentMethods: {
-              CHEQUE: 0,
-              VIREMENT: 0,
-              ESPECES: 0,
-              CARTE_BANCAIRE: 0,
+              CHECK: 0,
+              BANK_TRANSFER: 0,
+              CASH: 0,
+              CARD: 0,
             },
             invoiceCount: 0,
           });

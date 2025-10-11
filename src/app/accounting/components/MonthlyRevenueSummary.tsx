@@ -60,7 +60,7 @@ export default function MonthlyRevenueSummary({ monthlyData = [], loading = fals
       <div className="card-header">
         <h3 className="card-title">Résumé mensuel</h3>
         {monthLabel && (
-          <div className="items-center space-x-2">
+          <div className="flex items-center space-x-2">
             {hasData && (
               <button
                 type="button"

@@ -4,25 +4,25 @@ import type { PaymentMethod } from '@/types/invoice';
 
 interface PaymentMethodBreakdownProps {
   paymentMethods: {
-    CHEQUE: number;
-    VIREMENT: number;
-    ESPECES: number;
-    CARTE_BANCAIRE: number;
+    CHECK: number;
+    BANK_TRANSFER: number;
+    CASH: number;
+    CARD: number;
   };
 }
 
 const translatePaymentMethod = (method: PaymentMethod): string => {
   const translations: Record<PaymentMethod, string> = {
-    CHEQUE: 'Chèques',
-    VIREMENT: 'Virements',
-    ESPECES: 'Espèces',
-    CARTE_BANCAIRE: 'Carte bancaire',
+    CHECK: 'Chèques',
+    BANK_TRANSFER: 'Virements',
+    CASH: 'Espèces',
+    CARD: 'Carte bancaire',
   };
   return translations[method];
 };
 
 export default function PaymentMethodBreakdown({ paymentMethods }: PaymentMethodBreakdownProps) {
-  const methods: PaymentMethod[] = ['CHEQUE', 'VIREMENT', 'ESPECES', 'CARTE_BANCAIRE'];
+  const methods: PaymentMethod[] = ['CHECK', 'BANK_TRANSFER', 'CASH', 'CARD'];
 
   return (
     <div className="space-y-1 text-sm">

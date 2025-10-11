@@ -3,10 +3,10 @@ export interface MonthlyRevenue {
   month: string; // 'YYYY-MM' format
   total: number;
   paymentMethods: {
-    CHEQUE: number;
-    VIREMENT: number;
-    ESPECES: number;
-    CARTE_BANCAIRE: number;
+    CHECK: number;
+    BANK_TRANSFER: number;
+    CASH: number;
+    CARD: number;
   };
   invoiceCount: number;
 }

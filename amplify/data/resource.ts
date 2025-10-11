@@ -89,7 +89,7 @@ const schema = a.schema({
       total: a.float(),
       isPaid: a.boolean().default(false),
       status: a.enum(['DRAFT', 'PENDING', 'PAID', 'OVERDUE']),
-      paymentMethod: a.enum(['CHEQUE', 'VIREMENT', 'ESPECES', 'CARTE_BANCAIRE']),
+      paymentMethod: a.enum(['CHECK', 'BANK_TRANSFER', 'CASH', 'CARD']),
       paymentReference: a.string(),
       paidAt: a.datetime(),
       notes: a.string(),

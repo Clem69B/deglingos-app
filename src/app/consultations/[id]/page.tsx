@@ -263,10 +263,10 @@ export default function ConsultationDetailPage() {
   const translatePaymentMethod = (method: PaymentMethod | null | undefined) => {
     if (!method) return 'N/A';
     const translations: Record<PaymentMethod, string> = {
-      CHEQUE: 'Chèque',
-      VIREMENT: 'Virement',
-      ESPECES: 'Espèces',
-      CARTE_BANCAIRE: 'Carte bancaire',
+      CHECK: 'Chèque',
+      BANK_TRANSFER: 'Virement',
+      CASH: 'Espèces',
+      CARD: 'Carte bancaire',
     };
     return translations[method];
   };
