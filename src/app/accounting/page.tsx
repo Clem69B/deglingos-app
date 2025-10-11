@@ -5,6 +5,7 @@ import { useUserPermissions } from '../../hooks/useUserPermissions';
 import { useAccountingData } from '../../hooks/useAccountingData';
 import RevenueChart from './components/RevenueChart';
 import MonthlyRevenueSummary from './components/MonthlyRevenueSummary';
+import CheckTracker from './components/CheckTracker';
 import ErrorAlert from '../../components/ErrorAlert';
 
 export default function AccountingPage() {
@@ -89,30 +90,7 @@ export default function AccountingPage() {
         
         {/* Check Tracker - Right */}
         <div className="lg:col-span-4">
-          <div className="form-card">
-            <div className="card-header">
-              <h3 className="card-title">Chèques non encaissés</h3>
-              <div className="card-subtitle">
-                0 chèque en attente
-              </div>
-            </div>
-            <div className="empty-state">
-              <svg 
-                className="mx-auto h-10 w-10 text-gray-400" 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                strokeWidth={1.5} 
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z"
-                />
-              </svg>
-              <p className="empty-state-text">Suivi des chèques à venir</p>
-            </div>
-          </div>
+          <CheckTracker onError={setError} />
         </div>
       </div>
     </div>

@@ -93,6 +93,9 @@ const schema = a.schema({
       paymentReference: a.string(),
       paidAt: a.datetime(),
       notes: a.string(),
+      // Check deposit tracking fields
+      depositDate: a.date(),
+      isDeposited: a.boolean().default(false),
       createdAt: a.datetime(),
       updatedAt: a.datetime(),
     })
