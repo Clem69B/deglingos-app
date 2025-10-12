@@ -19,6 +19,9 @@ export interface InvoiceBaseData {
   paidAt?: string | null;
   paymentMethod?: PaymentMethod | null;
   paymentReference?: string | null;
+  // Check deposit tracking fields
+  depositDate?: string | null;
+  isDeposited?: boolean | null;
 }
 
 // Type pour créer une facture
