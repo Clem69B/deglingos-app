@@ -6,7 +6,10 @@ import { updateOverdueInvoices } from './functions/update-overdue-invoices/resou
 import { generateInvoicePdf } from './functions/generate-invoice-pdf/resource';
 import { sendInvoiceEmail } from './functions/send-invoice-email/resource';
 import { downloadInvoicePdf } from './functions/download-invoice-pdf/resource';
-import { PolicyStatement } from "aws-cdk-lib/aws-iam"
+import { PolicyStatement } from "aws-cdk-lib/aws-iam";
+
+const currentEnvironment = process.env.AMPLIFY_ENVIRONMENT || 'sandbox';
+const isProduction = currentEnvironment === 'production' || currentEnvironment === 'prod';
 
 export const backend = defineBackend({
   auth,
@@ -58,3 +61,21 @@ backend.addOutput({
     region: process.env.AWS_REGION || 'eu-west-3',
   },
 });
+
+if (isProduction) {
+  console.log('🔒 Enable Point-in-time Recovery for all tables (Prod only)');
+  
+  // Enable Point-in-time Recovery for all tables
+  Object.values(backend.data.resources.tables).forEach(table => {
+    table.tableArn; // Ensure table is properly initialized
+    const cfnTable = table.node.defaultChild as any;
+    if (cfnTable) {
+      cfnTable.pointInTimeRecoverySpecification = {
+        pointInTimeRecoveryEnabled: true,
+      };
+    }
+  });
+} else {
+  console.log(`⚠️  AWS Backup deactivated for : ${currentEnvironment}`);
+}
+
