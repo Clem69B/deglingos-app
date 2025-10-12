@@ -218,7 +218,29 @@ const InvoiceDetails = ({
             />
           </div>
 
-          <div className="detail-section sm:col-span-2">
+          {invoice.paymentMethod === 'CHECK' && (
+            <div className="detail-section">
+              <dt className="detail-label">Date d&apos;encaissement</dt>
+              <dd className="detail-value">
+                <div className="flex items-center gap-2">
+                  <span>{invoice.depositDate ? new Date(invoice.depositDate).toLocaleDateString('fr-FR') : 'N/A'}</span>
+                </div>
+              </dd>
+            </div>
+          )}
+
+          {invoice.paymentMethod === 'CHECK' && (
+            <div className="detail-section">
+              <dt className="detail-label">Chèque déposé</dt>
+              <dd className="detail-value">
+                <div className="flex items-center gap-2">
+                  <span>{translateStatus(invoice.isDeposited ? 'Oui' : 'Non')}</span>
+                </div>
+              </dd>
+            </div>
+          )}  
+
+          <div className="detail-section">
             <EditableField
               label="Notes"
               value={invoice.notes}

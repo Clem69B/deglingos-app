@@ -268,18 +268,26 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
       isPaid: true,
       paidAt,
       updatedAt: paidAt,
+      // Initialize check deposit tracking fields
+      isDeposited: invoice.paymentMethod === 'CHECK' ? false : null,
     };
 
     updateLocalCaches(updatedInvoice);
 
     try {
-      const result = await updateInvoice({
+      const updateData: UpdateInvoiceInput = {
         id,
         status: 'PAID',
         isPaid: true,
         paidAt,
-        updatedAt: updatedInvoice.updatedAt,
-      } as UpdateInvoiceInput);
+      };
+      
+      // Initialize isDeposited for checks
+      if (invoice.paymentMethod === 'CHECK') {
+        updateData.isDeposited = false;
+      }
+      
+      const result = await updateInvoice(updateData);
       if (!result) throw new Error('Update failed');
       updateLocalCaches(result);
     } catch (err) {
