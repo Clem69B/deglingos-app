@@ -220,7 +220,7 @@ const InvoiceDetails = ({
 
           {invoice.paymentMethod === 'CHECK' && (
             <div className="detail-section">
-              <dt className="detail-label">Date d'encaissement</dt>
+              <dt className="detail-label">Date d&apos;encaissement</dt>
               <dd className="detail-value">
                 <div className="flex items-center gap-2">
                   <span>{invoice.depositDate ? new Date(invoice.depositDate).toLocaleDateString('fr-FR') : 'N/A'}</span>

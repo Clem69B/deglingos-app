@@ -19,7 +19,6 @@ export interface CheckInvoice extends Invoice {
 export interface CheckManagement {
   undepositedChecks: CheckInvoice[];
   loading: boolean;
-  error: string | null;
   markAsDeposited: (invoiceIds: string[], depositDate: string) => Promise<void>;
   refreshChecks: () => Promise<void>;
 }
@@ -27,7 +26,6 @@ export interface CheckManagement {
 export const useCheckManagement = ({ onError }: UseCheckManagementOptions): CheckManagement => {
   const [undepositedChecks, setUndepositedChecks] = useState<CheckInvoice[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const normalizeError = (err: unknown): string => {
     if (!err) return 'Unknown error';
@@ -45,7 +43,6 @@ export const useCheckManagement = ({ onError }: UseCheckManagementOptions): Chec
 
   const handleError = (err: unknown) => {
     const message = normalizeError(err);
-    setError(message);
     onError(message);
     return message;
   };
@@ -75,7 +72,6 @@ export const useCheckManagement = ({ onError }: UseCheckManagementOptions): Chec
   // Get all undeposited checks
   const getUndepositedChecks = useCallback(async () => {
     setLoading(true);
-    setError(null);
     onError('');
 
     try {
@@ -124,7 +120,6 @@ export const useCheckManagement = ({ onError }: UseCheckManagementOptions): Chec
     }
 
     setLoading(true);
-    setError(null);
     onError('');
 
     try {
@@ -160,7 +155,6 @@ export const useCheckManagement = ({ onError }: UseCheckManagementOptions): Chec
   return {
     undepositedChecks,
     loading,
-    error,
     markAsDeposited,
     refreshChecks: getUndepositedChecks,
   };

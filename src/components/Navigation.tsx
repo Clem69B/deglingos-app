@@ -49,6 +49,7 @@ function DocumentTextIcon(props: React.ComponentProps<'svg'>) {
   );
 }
 
+/*
 function CalendarDaysIcon(props: React.ComponentProps<'svg'>) {
   return (
     <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
@@ -56,6 +57,7 @@ function CalendarDaysIcon(props: React.ComponentProps<'svg'>) {
     </svg>
   );
 }
+*/
 
 function ChartBarIcon(props: React.ComponentProps<'svg'>) {
   return (
