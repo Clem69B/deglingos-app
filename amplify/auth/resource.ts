@@ -26,6 +26,31 @@ export const auth = defineAuth({
       mutable: true,
       required: false,
     },
+    // Custom attributes for professional profile
+    'custom:professionalTitle': {
+      dataType: 'String',
+      mutable: true,
+    },
+    'custom:postalAddress': {
+      dataType: 'String',
+      mutable: true,
+    },
+    'custom:siret': {
+      dataType: 'String',
+      mutable: true,
+    },
+    'custom:rpps': {
+      dataType: 'String',
+      mutable: true,
+    },
+    'custom:defaultConsultationPrice': {
+      dataType: 'String',
+      mutable: true,
+    },
+    'custom:invoiceFooter': {
+      dataType: 'String',
+      mutable: true,
+    },
   },
   groups: ['osteopaths', 'assistants', 'admins'],
   access: (allow) => [
