@@ -7,6 +7,7 @@ import type { Schema } from '../../../amplify/data/resource';
 import PatientCombobox from '../PatientCombobox';
 import type { CreateInvoiceInput } from '../../types/invoice';
 import useInvoiceManagement from '../../hooks/useInvoiceManagement';
+import { useUserProfile } from '../../hooks/useUserProfile';
 
 const client = generateClient<Schema>();
 
@@ -19,19 +20,33 @@ interface InvoiceFormProps {
 const InvoiceForm: React.FC<InvoiceFormProps> = ({ consultationId, patientId, onError }) => {
   const router = useRouter();
   const { createInvoice, loading: isSubmitting } = useInvoiceManagement({ onError });
+  const { fetchCurrentUserProfile } = useUserProfile();
   const [selectedPatient, setSelectedPatient] = useState<{ firstName: string; lastName: string } | null>(null);
+  const [defaultPrice, setDefaultPrice] = useState<number>(55); // Fallback default price
   
   const [formData, setFormData] = useState<Partial<CreateInvoiceInput>>({
     invoiceNumber: '',
     date: new Date().toISOString().split('T')[0], // Default to today
     dueDate: '',
-    price: 55, // Default amount is 55
+    price: 55, // Will be updated from user profile
     status: 'DRAFT', // Status is always DRAFT on creation
     paymentMethod: 'BANK_TRANSFER',
     notes: '',
     patientId: '',
     consultationId: null,
   });
+
+  // Load user's default consultation price
+  useEffect(() => {
+    const loadDefaultPrice = async () => {
+      const profile = await fetchCurrentUserProfile();
+      if (profile?.defaultConsultationPrice) {
+        setDefaultPrice(profile.defaultConsultationPrice);
+        setFormData(prev => ({ ...prev, price: profile.defaultConsultationPrice }));
+      }
+    };
+    loadDefaultPrice();
+  }, [fetchCurrentUserProfile]);
 
   useEffect(() => {
     if (patientId) {

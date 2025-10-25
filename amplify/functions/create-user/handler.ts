@@ -5,8 +5,11 @@ import {
   CognitoIdentityProviderClient,
   MessageActionType,
 } from '@aws-sdk/client-cognito-identity-provider';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 
 const client = new CognitoIdentityProviderClient();
+const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
 export const handler = async (event: any) => {
   try {
@@ -64,6 +67,32 @@ export const handler = async (event: any) => {
         console.error(`Error adding user to group ${groupName}:`, groupError);
         // Continue avec les autres groupes
       }
+    }
+    
+    // Create UserProfile record in DynamoDB
+    try {
+      const userProfileTableName = env.AMPLIFY_DATA_USERPROFILE_TABLE_NAME;
+      const now = new Date().toISOString();
+      
+      const userProfile = {
+        userId: userId,
+        email: email,
+        givenName: givenName,
+        familyName: familyName,
+        phoneNumber: phoneNumber || null,
+        createdAt: now,
+        updatedAt: now,
+      };
+      
+      await dynamoClient.send(new PutCommand({
+        TableName: userProfileTableName,
+        Item: userProfile,
+      }));
+      
+      console.log(`UserProfile created for ${userId}`);
+    } catch (profileError) {
+      console.error('Error creating UserProfile:', profileError);
+      // Continue - profile can be created later via migration
     }
     
     const result = {

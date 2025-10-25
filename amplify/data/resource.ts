@@ -9,6 +9,32 @@ import { sendInvoiceEmail } from '../functions/send-invoice-email/resource';
 import { downloadInvoicePdf } from '../functions/download-invoice-pdf/resource';
 
 const schema = a.schema({
+  // UserProfile Model
+  UserProfile: a
+    .model({
+      userId: a.string().required(),
+      email: a.email().required(),
+      givenName: a.string().required(),
+      familyName: a.string().required(),
+      phoneNumber: a.phone(),
+      professionalTitle: a.string(),
+      postalAddress: a.string(),
+      siret: a.string(),
+      rpps: a.string(),
+      defaultConsultationPrice: a.float(),
+      invoiceFooter: a.string(),
+      signatureS3Key: a.string(),
+      createdAt: a.datetime(),
+      updatedAt: a.datetime(),
+    })
+    .identifier(['userId'])
+    .disableOperations(["subscriptions"])
+    .authorization((allow) => [
+      allow.owner().identityClaim('sub').to(['read', 'update']),
+      allow.group('admins').to(['read', 'update']),
+      allow.group('osteopaths').to(['read']),
+    ]),
+
   // Patient Model
   Patient: a
     .model({
