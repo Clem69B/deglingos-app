@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reçu d'honoraires - {{ invoice_number }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            margin-bottom: 40px;
+        }
+        
+        .practitioner-info {
+            font-size: 10pt;
+            line-height: 1.6;
+        }
+        
+        .practitioner-name {
+            font-size: 13pt;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+        
+        .practitioner-title {
+            font-size: 11pt;
+            margin-bottom: 1px;
+        }
+        
+        .practitioner-details {
+            margin-top: 15px;
+        }
+        
+        .preserve-newlines {
+            white-space: pre-line;
+        }
+        
+        .title {
+            text-align: center;
+            font-size: 14pt;
+            font-weight: bold;
+            margin: 50px 0 40px 0;
+            letter-spacing: 3px;
+        }
+        
+        .content {
+            margin-bottom: 30px;
+        }
+        
+        .field-row {
+            margin-bottom: 15px;
+            line-height: 1.8;
+        }
+        
+        .field-label {
+            display: inline;
+        }
+        
+        .field-value {
+            display: inline;
+            font-weight: normal;
+        }
+        
+        .amount {
+            font-size: 12pt;
+        }
+        
+        .signature-section {
+            margin-top: 60px;
+            margin-bottom: 40px;
+        }
+        
+        .signature-image {
+            max-width: 200px;
+            max-height: 100px;
+            margin-top: 20px;
+        }
+        
+        .separator {
+            border-top: 1px dashed #666;
+            margin: 40px 0 20px 0;
+        }
+        
+        .footer {
+            font-size: 9pt;
+            line-height: 1.4;
+            color: #555;
+        }
+        
+        .underline-dots {
+            border-bottom: 1px dotted #333;
+            display: inline-block;
+            min-width: 50px;
+            padding: 0 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="practitioner-info">
+                <div class="practitioner-name">{{ practitioner_name }}</div>
+                <div class="practitioner-title">{{ professional_title }}</div>
+                <div>RPPS : {{ rpps_number }}</div>
+                <div>SIRET : {{ siret_number }}</div>
+                
+                <div class="practitioner-details">
+                    <div class="preserve-newlines">{{ address }}</div>
+                    <div>{{ postal_code }} {{ city }}</div>
+                    <div>{{ phone }}</div>
+                    <div>{{ email }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="title">REÇU D'HONORAIRES</div>
+        
+        <div class="content">
+            <div class="field-row amount">
+                Je soussignée, certifie avoir reçu la somme de <span class="underline-dots">{{ amount }}</span> €
+            </div>
+            
+            <div class="field-row">
+                Pour une consultation d'ostéopathie effectuée le <span class="underline-dots">{{ consultation_date }}</span>
+            </div>
+            
+            <div class="field-row">
+                Dont le bénéficiaire est : <span class="underline-dots">{{ patient_name }}</span>
+            </div>
+        </div>
+        
+        <div class="signature-section">
+            <div>Fait pour servir et valoir ce que de droit</div>
+            {% if signature_data_uri %}
+            <div>
+                <img src="{{ signature_data_uri }}" alt="Signature" class="signature-image" />
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="separator"></div>
+        
+        <div class="footer">
+            <p>Membre d'une association de gestion agréée par l'administration fiscale, acceptant à ce titre le règlement des honoraires par chèque libellé à son nom.</p>
+        </div>
+    </div>
+</body>
+</html>
