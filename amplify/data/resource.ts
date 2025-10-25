@@ -30,9 +30,9 @@ const schema = a.schema({
     .identifier(['userId'])
     .disableOperations(["subscriptions"])
     .authorization((allow) => [
-      allow.owner().identityClaim('sub').to(['read', 'update']),
+      allow.authenticated().to(['read']),
       allow.group('admins').to(['read', 'update']),
-      allow.group('osteopaths').to(['read']),
+      allow.group('osteopaths').to(['read', 'update']),
     ]),
 
   // Patient Model

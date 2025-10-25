@@ -22,7 +22,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ consultationId, patientId, on
   const { createInvoice, loading: isSubmitting } = useInvoiceManagement({ onError });
   const { fetchCurrentUserProfile } = useUserProfile();
   const [selectedPatient, setSelectedPatient] = useState<{ firstName: string; lastName: string } | null>(null);
-  const [defaultPrice, setDefaultPrice] = useState<number>(55); // Fallback default price
   
   const [formData, setFormData] = useState<Partial<CreateInvoiceInput>>({
     invoiceNumber: '',
@@ -41,7 +40,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ consultationId, patientId, on
     const loadDefaultPrice = async () => {
       const profile = await fetchCurrentUserProfile();
       if (profile?.defaultConsultationPrice) {
-        setDefaultPrice(profile.defaultConsultationPrice);
         setFormData(prev => ({ ...prev, price: profile.defaultConsultationPrice }));
       }
     };

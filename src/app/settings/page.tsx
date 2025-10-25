@@ -80,7 +80,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSignatureUpload = async (key: string) => {
+  const handleSignatureUpload = async () => {
     // Reload profile to get updated signature
     const updatedProfile = await fetchCurrentUserProfile();
     if (updatedProfile) {
