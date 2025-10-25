@@ -3,6 +3,14 @@
 ## Overview
 This migration populates the UserProfile table with data from existing Cognito users.
 
+## Prerequisites
+
+Before running the migration:
+1. The UserProfile table must be deployed and exist in DynamoDB
+2. The `populate-user-profiles` Lambda function must be deployed
+3. You must be logged in as an admin user
+4. Ensure the Amplify backend is fully deployed with the latest data schema
+
 ## Running the Migration
 
 The migration can be executed by calling the `populateUserProfiles` mutation. This mutation is restricted to admins only.
