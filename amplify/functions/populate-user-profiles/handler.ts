@@ -21,7 +21,7 @@ export const handler = async (event: any) => {
     
     do {
       // List users from Cognito
-      const listCommand = new ListUsersCommand({
+      const listCommand: ListUsersCommand = new ListUsersCommand({
         UserPoolId: env.AMPLIFY_AUTH_USERPOOL_ID,
         Limit: 60,
         PaginationToken: paginationToken,

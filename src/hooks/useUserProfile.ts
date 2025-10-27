@@ -133,7 +133,16 @@ export const useUserProfile = () => {
       }
 
       // Prepare update data
-      const updateData: any = {};
+      type UpdateData = {
+        professionalTitle?: string | null;
+        postalAddress?: string | null;
+        siret?: string | null;
+        rpps?: string | null;
+        invoiceFooter?: string | null;
+        defaultConsultationPrice?: number;
+      };
+
+      const updateData: UpdateData = {};
       if (data.professionalTitle !== undefined) updateData.professionalTitle = data.professionalTitle || null;
       if (data.postalAddress !== undefined) updateData.postalAddress = data.postalAddress || null;
       if (data.siret !== undefined) updateData.siret = data.siret || null;
