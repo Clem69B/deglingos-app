@@ -41,7 +41,6 @@ export const handler = async (event: any) => {
       UserPoolId: env.AMPLIFY_AUTH_USERPOOL_ID,
       Username: email,
       UserAttributes: userAttributes,
-      MessageAction: MessageActionType.RESEND, // Envoie l'email de bienvenue avec mot de passe temporaire
       DesiredDeliveryMediums: ['EMAIL'],
     });
     

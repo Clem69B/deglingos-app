@@ -133,22 +133,22 @@ export const useUserProfile = () => {
       }
 
       // Prepare update data
-      type UpdateData = {
-        professionalTitle?: string | null;
-        postalAddress?: string | null;
-        siret?: string | null;
-        rpps?: string | null;
-        invoiceFooter?: string | null;
-        defaultConsultationPrice?: number;
-      };
+      type UpdateData = Partial<{
+        professionalTitle: string;
+        postalAddress: string;
+        siret: string;
+        rpps: string;
+        invoiceFooter: string;
+        defaultConsultationPrice: number;
+      }>;
 
       const updateData: UpdateData = {};
-      if (data.professionalTitle !== undefined) updateData.professionalTitle = data.professionalTitle || null;
-      if (data.postalAddress !== undefined) updateData.postalAddress = data.postalAddress || null;
-      if (data.siret !== undefined) updateData.siret = data.siret || null;
-      if (data.rpps !== undefined) updateData.rpps = data.rpps || null;
-      if (data.invoiceFooter !== undefined) updateData.invoiceFooter = data.invoiceFooter || null;
-      
+      if (data.professionalTitle !== undefined) updateData.professionalTitle = data.professionalTitle;
+      if (data.postalAddress !== undefined) updateData.postalAddress = data.postalAddress;
+      if (data.siret !== undefined) updateData.siret = data.siret;
+      if (data.rpps !== undefined) updateData.rpps = data.rpps;
+      if (data.invoiceFooter !== undefined) updateData.invoiceFooter = data.invoiceFooter;
+
       if (data.defaultConsultationPrice !== undefined && data.defaultConsultationPrice.trim()) {
         updateData.defaultConsultationPrice = parseFloat(data.defaultConsultationPrice);
       }
@@ -163,7 +163,8 @@ export const useUserProfile = () => {
         return true;
       }
 
-      throw new Error('Failed to update profile');
+      // Provide feedback if update failed
+      throw new Error(response.errors?.[0]?.message || 'Failed to update profile');
     } catch (err) {
       console.error('❌ Error updating user profile:', err);
       const errorMessage = err instanceof Error ? err.message : 'Error updating profile';

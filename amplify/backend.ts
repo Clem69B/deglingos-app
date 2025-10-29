@@ -86,7 +86,8 @@ const cognitoPolicy = new PolicyStatement({
     'cognito-idp:AdminListGroupsForUser'
   ],
   resources: [
-    `arn:aws:cognito-idp:${process.env.AWS_REGION || 'eu-west-3'}:*:userpool/*`
+    // Get ARN from auth
+    backend.auth.resources.userPool.userPoolArn
   ],
 });
 
@@ -96,7 +97,6 @@ backend.listUsers.resources.lambda.addToRolePolicy(cognitoPolicy);
 backend.createUser.resources.lambda.addToRolePolicy(cognitoPolicy);
 backend.deleteUser.resources.lambda.addToRolePolicy(cognitoPolicy);
 backend.manageUserGroups.resources.lambda.addToRolePolicy(cognitoPolicy);
-
 
 // Pass the User Pool ID to all user management functions
 backend.createUser.addEnvironment('AMPLIFY_AUTH_USERPOOL_ID', backend.auth.resources.userPool.userPoolId);
