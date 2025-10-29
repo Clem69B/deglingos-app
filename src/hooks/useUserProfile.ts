@@ -185,7 +185,7 @@ export const useUserProfile = () => {
       setError(null);
 
       // Validate file type
-      if (!file.type.includes('jpeg') && !file.type.includes('jpg')) {
+      if (file.type !== 'image/jpeg' && file.type !== 'image/pjpeg') {
         const errorMsg = 'Le fichier doit être au format JPG';
         setError(errorMsg);
         return { success: false, error: errorMsg };

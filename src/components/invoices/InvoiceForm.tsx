@@ -39,7 +39,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ consultationId, patientId, on
   useEffect(() => {
     const loadDefaultPrice = async () => {
       const profile = await fetchCurrentUserProfile();
-      if (profile?.defaultConsultationPrice) {
+      if (profile?.defaultConsultationPrice != null) {
         setFormData(prev => ({ ...prev, price: profile.defaultConsultationPrice }));
       }
     };

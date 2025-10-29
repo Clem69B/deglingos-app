@@ -109,7 +109,7 @@ backend.manageUserGroups.addEnvironment('AMPLIFY_AUTH_USERPOOL_ID', backend.auth
 backend.createUser.addEnvironment('AMPLIFY_DATA_USERPROFILE_TABLE_NAME', backend.data.resources.tables['UserProfile'].tableName);
 backend.data.resources.tables['UserProfile'].grantReadWriteData(backend.createUser.resources.lambda);
 
-// TODO : Migration specific, to remove on next version
+// TODO: Migration specific, to remove on next version
 backend.populateUserProfiles.resources.lambda.addToRolePolicy(cognitoPolicy);
 backend.populateUserProfiles.addEnvironment('AMPLIFY_AUTH_USERPOOL_ID', backend.auth.resources.userPool.userPoolId);
 backend.populateUserProfiles.addEnvironment('AMPLIFY_DATA_USERPROFILE_TABLE_NAME', backend.data.resources.tables['UserProfile'].tableName);
