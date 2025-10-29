@@ -7,8 +7,35 @@ import { manageUserGroups } from '../functions/manage-user-groups/resource';
 import { generateInvoicePdf } from '../functions/generate-invoice-pdf/resource';
 import { sendInvoiceEmail } from '../functions/send-invoice-email/resource';
 import { downloadInvoicePdf } from '../functions/download-invoice-pdf/resource';
+import { populateUserProfiles } from '../functions/populate-user-profiles/resource';
 
 const schema = a.schema({
+  // UserProfile Model
+  UserProfile: a
+    .model({
+      userId: a.string().required(),
+      email: a.email().required(),
+      givenName: a.string().required(),
+      familyName: a.string().required(),
+      phoneNumber: a.phone(),
+      professionalTitle: a.string(),
+      postalAddress: a.string(),
+      siret: a.string(),
+      rpps: a.string(),
+      defaultConsultationPrice: a.float(),
+      invoiceFooter: a.string(),
+      signatureS3Key: a.string(),
+      createdAt: a.datetime(),
+      updatedAt: a.datetime(),
+    })
+    .identifier(['userId'])
+    .disableOperations(["subscriptions"])
+    .authorization((allow) => [
+      allow.authenticated().to(['read']),
+      allow.group('admins').to(['read', 'update']),
+      allow.group('osteopaths').to(['read', 'update']),
+    ]),
+
   // Patient Model
   Patient: a
     .model({
@@ -247,6 +274,13 @@ const schema = a.schema({
     .returns(a.json())
     .authorization((allow) => [allow.authenticated()])
     .handler(a.handler.function(downloadInvoicePdf)),
+
+  // User Profile Migration (admin only)
+  populateUserProfiles: a
+    .mutation()
+    .returns(a.json())
+    .authorization((allow) => [allow.group('admins')])
+    .handler(a.handler.function(populateUserProfiles)),
 });
 
 export type Schema = ClientSchema<typeof schema>;
