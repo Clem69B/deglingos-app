@@ -10,5 +10,8 @@ export const storage = defineStorage({
       allow.groups(['osteopaths']).to(['read', 'write', 'delete']),
       allow.groups(['assistants']).to(['read'])
     ],
+    'user_signatures/*': [
+      allow.groups(['osteopaths', 'assistants', 'admins']).to(['read', 'write', 'delete'])
+    ],
   }),
 });
