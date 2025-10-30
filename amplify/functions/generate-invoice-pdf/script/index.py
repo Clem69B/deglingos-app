@@ -3,9 +3,9 @@ import os
 import boto3
 from datetime import datetime
 from decimal import Decimal
-from weasyprint import HTML, CSS
+from weasyprint import HTML
 from jinja2 import Template
-from io import BytesIO
+
 
 # AWS Clients
 dynamodb = boto3.resource('dynamodb')

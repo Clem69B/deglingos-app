@@ -34,9 +34,9 @@ export const generateInvoicePdf = defineFunction(
 
     return new Function(scope, "generate-invoice-pdf", {
       handler: "index.handler",
-      memorySize: 512,
+      memorySize: 1024,
       runtime: Runtime.PYTHON_3_12,
-      timeout: Duration.seconds(10),
+      timeout: Duration.seconds(30),
       code: Code.fromAsset(path.join(functionDir, "script")),
       environment: {
         GDK_PIXBUF_MODULE_FILE: "/opt/lib/loaders.cache",
