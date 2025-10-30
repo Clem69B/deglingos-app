@@ -1,0 +1,11 @@
+# Fichiers générés localement
+test_invoice.pdf
+*.pyc
+__pycache__/
+.pytest_cache/
+venv/
+.venv/
+
+# Fichiers de l'ancien handler TypeScript (à supprimer manuellement si besoin)
+# handler.ts
+# node_modules/

@@ -41,12 +41,14 @@ export const backend = defineBackend({
 backend.updateOverdueInvoices.addEnvironment('AMPLIFY_DATA_INVOICE_TABLE_NAME', backend.data.resources.tables['Invoice'].tableName);
 backend.data.resources.tables['Invoice'].grantReadWriteData(backend.updateOverdueInvoices.resources.lambda);
 
-// Grant PDF generation function access to Invoice and Patient tables and S3 storage
+// Grant PDF generation function access to Invoice, Patient and UserProfile tables and S3 storage
 backend.generateInvoicePdf.addEnvironment('AMPLIFY_DATA_INVOICE_TABLE_NAME', backend.data.resources.tables['Invoice'].tableName);
 backend.generateInvoicePdf.addEnvironment('AMPLIFY_DATA_PATIENT_TABLE_NAME', backend.data.resources.tables['Patient'].tableName);
+backend.generateInvoicePdf.addEnvironment('AMPLIFY_DATA_USERPROFILE_TABLE_NAME', backend.data.resources.tables['UserProfile'].tableName);
 backend.generateInvoicePdf.addEnvironment('AMPLIFY_STORAGE_BUCKET_NAME', backend.storage.resources.bucket.bucketName);
 backend.data.resources.tables['Invoice'].grantReadData(backend.generateInvoicePdf.resources.lambda);
 backend.data.resources.tables['Patient'].grantReadData(backend.generateInvoicePdf.resources.lambda);
+backend.data.resources.tables['UserProfile'].grantReadData(backend.generateInvoicePdf.resources.lambda);
 backend.storage.resources.bucket.grantReadWrite(backend.generateInvoicePdf.resources.lambda);
 
 // Grant email function access to Invoice and Patient tables and S3 storage
