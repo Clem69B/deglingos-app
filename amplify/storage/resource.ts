@@ -3,16 +3,15 @@ import { defineStorage } from '@aws-amplify/backend';
 export const storage = defineStorage({
   name: 'osteopathieStorage',
   access: (allow) => ({
+    'patient_attachments/*': [
+      allow.groups(['osteopaths']).to(['read', 'write', 'delete'])
+    ],
     'invoices/*': [
       allow.groups(['osteopaths']).to(['read', 'write', 'delete']),
-      allow.groups(['assistants']).to(['read', 'write']),
+      allow.groups(['assistants']).to(['read'])
     ],
-    'documents/*': [
-      allow.groups(['osteopaths']).to(['read', 'write', 'delete']),
-      allow.groups(['assistants']).to(['read', 'write']),
-    ],
-    'exports/*': [
-      allow.groups(['osteopaths']).to(['read', 'write', 'delete']),
+    'user_signatures/*': [
+      allow.groups(['osteopaths', 'assistants', 'admins']).to(['read', 'write', 'delete'])
     ],
   }),
 });

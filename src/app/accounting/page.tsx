@@ -1,0 +1,98 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useUserPermissions } from '../../hooks/useUserPermissions';
+import { useAccountingData } from '../../hooks/useAccountingData';
+import RevenueChart from './components/RevenueChart';
+import MonthlyRevenueSummary from './components/MonthlyRevenueSummary';
+import CheckTracker from './components/CheckTracker';
+import ErrorAlert from '../../components/ErrorAlert';
+
+export default function AccountingPage() {
+  const [error, setError] = useState<string>('');
+  const { monthlyData, loading, getMonthlyRevenue } = useAccountingData({
+    onError: setError,
+  });
+  const { hasAnyGroup, loading: permissionsLoading } = useUserPermissions();
+  const canViewAccounting = hasAnyGroup(['osteopaths', 'assistants', 'admins']);
+
+  // Fetch revenue data on mount
+  useEffect(() => {
+    if (canViewAccounting && !permissionsLoading) {
+      getMonthlyRevenue(6);
+    }
+  }, [canViewAccounting, permissionsLoading, getMonthlyRevenue]);
+
+  if (permissionsLoading) {
+    return (
+      <div className="flex justify-center items-center h-32">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <span className="ml-2 text-sm text-gray-600">Chargement des permissions...</span>
+      </div>
+    );
+  }
+
+  if (!canViewAccounting) {
+    return (
+      <div className="empty-state">
+        <svg 
+          className="mx-auto h-12 w-12 text-gray-400" 
+          fill="none" 
+          viewBox="0 0 24 24" 
+          strokeWidth={1.5} 
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"
+          />
+        </svg>
+        <h3 className="mt-2 text-sm font-medium text-gray-900">Accès non autorisé</h3>
+        <p className="empty-state-text">
+          Vous n&apos;avez pas les permissions nécessaires pour voir cette section.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="page-header">
+        <div className="page-header-content">
+          <h1 className="page-title">Tableau de bord comptabilité</h1>
+          <p className="page-subtitle">
+            Suivez vos revenus, gérez vos chèques et analysez votre activité financière
+          </p>
+        </div>
+      </div>
+
+      {error && (
+        <ErrorAlert 
+          error={error} 
+          onClose={() => setError('')}
+        />
+      )}
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Revenue Chart - Full width top */}
+        <div className="lg:col-span-3">
+          <RevenueChart data={monthlyData} loading={loading} />
+        </div>
+        
+        {/* Monthly Summary - Left */}
+        <div className="lg:col-span-1">
+          <MonthlyRevenueSummary 
+            monthlyData={monthlyData} 
+            loading={loading} 
+          />
+        </div>
+        
+        {/* Check Tracker - Right */}
+        <div className="lg:col-span-2">
+          <CheckTracker onError={setError} />
+        </div>
+      </div>
+    </div>
+  );
+}

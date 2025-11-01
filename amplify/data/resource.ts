@@ -1,6 +1,41 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
+import { getUserDetails } from '../functions/get-user-details/resource';
+import { listUsers } from '../functions/list-users/resource';
+import { createUser } from '../functions/create-user/resource';
+import { deleteUser } from '../functions/delete-user/resource';
+import { manageUserGroups } from '../functions/manage-user-groups/resource';
+import { generateInvoicePdf } from '../functions/generate-invoice-pdf/resource';
+import { sendInvoiceEmail } from '../functions/send-invoice-email/resource';
+import { downloadInvoicePdf } from '../functions/download-invoice-pdf/resource';
+import { populateUserProfiles } from '../functions/populate-user-profiles/resource';
 
 const schema = a.schema({
+  // UserProfile Model
+  UserProfile: a
+    .model({
+      userId: a.string().required(),
+      email: a.email().required(),
+      givenName: a.string().required(),
+      familyName: a.string().required(),
+      phoneNumber: a.phone(),
+      professionalTitle: a.string(),
+      postalAddress: a.string(),
+      siret: a.string(),
+      rpps: a.string(),
+      defaultConsultationPrice: a.float(),
+      invoiceFooter: a.string(),
+      signatureS3Key: a.string(),
+      createdAt: a.datetime(),
+      updatedAt: a.datetime(),
+    })
+    .identifier(['userId'])
+    .disableOperations(["subscriptions"])
+    .authorization((allow) => [
+      allow.authenticated().to(['read']),
+      allow.group('admins').to(['read', 'update']),
+      allow.group('osteopaths').to(['read', 'update']),
+    ]),
+
   // Patient Model
   Patient: a
     .model({
@@ -15,20 +50,33 @@ const schema = a.schema({
       postalCode: a.string(),
       gender: a.enum(['M', 'F', 'OTHER']),
       profession: a.string(),
-      emergencyContact: a.string(),
+      referringPhysician: a.string(),
       medicalHistory: a.string(),
-      allergies: a.string(),
+      surgicalHistory: a.string(),
       currentMedications: a.string(),
+      activities: a.string(),
       consultations: a.hasMany('Consultation', 'patientId'),
       Appointment: a.hasMany('Appointment', 'patientId'),
       invoices: a.hasMany('Invoice', 'patientId'),
       createdAt: a.datetime(),
       updatedAt: a.datetime(),
     })
+    .disableOperations(["subscriptions"])
     .authorization((allow) => [
       allow.group('osteopaths'),
       allow.group('assistants').to(['read']),
     ]),
+
+  // Anamnesis custom type
+  Anamnesis: a.customType({
+    skull: a.string(), 
+    cervical: a.string(),
+    digestive: a.string(),
+    cardioThoracic: a.string(),
+    gynecological: a.string(),
+    sleep: a.string(),
+    psychological: a.string(),
+  }),
 
   // Consultation Model
   Consultation: a
@@ -37,25 +85,20 @@ const schema = a.schema({
       patientId: a.id().required(),
       patient: a.belongsTo('Patient', 'patientId'),
       date: a.datetime().required(),
-      duration: a.integer().default(60), // minutes
-      reason: a.string().required(),
-      // Anamnèse structurée par systèmes
-      anamnesisSkullCervical: a.string(), // Crâne, Cervicale
-      anamnesisDigestive: a.string(), // Système digestif
-      anamnesisCardioThoracic: a.string(), // Cardique / pulmonaire / thoracique
-      anamnesisGynecological: a.string(), // Gynécologique
-      anamnesisSleep: a.string(), // Sommeil
-      anamnesisPsychological: a.string(), // Psychologique / Emotionnel
+      duration: a.integer().default(60),
+      reason: a.string(),
+      anamnesis: a.ref('Anamnesis'),
       treatment: a.string(),
       recommendations: a.string(),
-      nextAppointment: a.datetime(),
       invoice: a.hasOne('Invoice', 'consultationId'),
       notes: a.string(),
       createdAt: a.datetime(),
       updatedAt: a.datetime(),
     })
+    .disableOperations(["subscriptions"])
     .authorization((allow) => [
-      allow.group('osteopaths')
+      allow.group('osteopaths'),
+      allow.owner()
     ]),
 
   // Invoice Model
@@ -70,18 +113,23 @@ const schema = a.schema({
       date: a.date().required(),
       dueDate: a.date(),
       price: a.float(),
-      tax: a.float().default(0),
-      total: a.float().required(),
+      total: a.float(),
       isPaid: a.boolean().default(false),
-      status: a.enum(['DRAFT', 'SENT', 'PAID', 'OVERDUE']),
+      status: a.enum(['DRAFT', 'PENDING', 'PAID', 'OVERDUE']),
+      paymentMethod: a.enum(['CHECK', 'BANK_TRANSFER', 'CASH', 'CARD']),
+      paymentReference: a.string(),
       paidAt: a.datetime(),
       notes: a.string(),
+      // Check deposit tracking fields
+      depositDate: a.date(),
+      isDeposited: a.boolean().default(false),
       createdAt: a.datetime(),
       updatedAt: a.datetime(),
     })
+    .disableOperations(["subscriptions"])
     .authorization((allow) => [
       allow.group('osteopaths'),
-      allow.group('assistants').to(['read', 'create']),
+      allow.group('assistants').to(['read', 'create', 'update']),
     ]),
 
   // Appointment Model (pour la synchronisation externe)
@@ -100,10 +148,139 @@ const schema = a.schema({
       createdAt: a.datetime(),
       updatedAt: a.datetime(),
     })
+    .disableOperations(["subscriptions"])
     .authorization((allow) => [
       allow.group('osteopaths'),
       allow.group('assistants'),
     ]),
+
+  // User Details Type
+  UserDetailsType: a.customType({
+    userId: a.string().required(),
+    email: a.string().required(),
+    givenName: a.string().required(),
+    familyName: a.string().required(),
+    phoneNumber: a.string(),
+    enabled: a.boolean().required(),
+    userStatus: a.string().required(),
+    groups: a.string().array(),
+    createdDate: a.string().required(),
+    lastModifiedDate: a.string().required(),
+  }),
+
+  // User List Type
+  UserListType: a.customType({
+    users: a.ref('UserDetailsType').array(),
+    nextToken: a.string(),
+    totalCount: a.integer(),
+  }),
+
+  // User Mutation Response Type
+  UserMutationResponseType: a.customType({
+    success: a.boolean().required(),
+    message: a.string().required(),
+    userId: a.string(),
+  }),
+
+  // User Management Queries
+  getUserDetails: a
+    .query()
+    .arguments({ userId: a.string().required() })
+    .authorization((allow) => [
+      allow.group('osteopaths'), 
+      allow.group('assistants'), 
+      allow.group('admins')
+    ])
+    .handler(a.handler.function(getUserDetails))
+    .returns(a.ref('UserDetailsType')),
+
+  listUsers: a
+    .query()
+    .arguments({ 
+      limit: a.integer(), 
+      nextToken: a.string() 
+    })
+    .authorization((allow) => [
+      allow.group('osteopaths'),
+      allow.group('assistants'),
+      allow.group('admins')
+    ])
+    .handler(a.handler.function(listUsers))
+    .returns(a.ref('UserListType')),
+
+  // User Management Mutations (admin only)
+  createUser: a
+    .mutation()
+    .arguments({
+      email: a.string().required(),
+      givenName: a.string().required(),
+      familyName: a.string().required(),
+      phoneNumber: a.string(),
+      groups: a.string().array()
+    })
+    .authorization((allow) => [allow.group('admins')])
+    .handler(a.handler.function(createUser))
+    .returns(a.ref('UserMutationResponseType')),
+
+  deleteUser: a
+    .mutation()
+    .arguments({ userId: a.string().required() })
+    .authorization((allow) => [allow.group('admins')])
+    .handler(a.handler.function(deleteUser))
+    .returns(a.ref('UserMutationResponseType')),
+
+  manageUserGroups: a
+    .mutation()
+    .arguments({
+      action: a.enum(['add', 'remove']),
+      userId: a.string().required(),
+      groupName: a.string().required()
+    })
+    .authorization((allow) => [allow.group('admins')])
+    .handler(a.handler.function(manageUserGroups))
+    .returns(a.ref('UserMutationResponseType')),
+
+  removeUserFromGroup: a
+    .mutation()
+    .arguments({
+      userId: a.string().required(),
+      groupName: a.string().required()
+    })
+    .authorization((allow) => [allow.group('admins')])
+    .handler(a.handler.function(manageUserGroups))
+    .returns(a.ref('UserMutationResponseType')),
+
+  // Invoice PDF Management Mutations
+  generateInvoicePDF: a
+    .mutation()
+    .arguments({ invoiceId: a.string().required() })
+    .returns(a.json())
+    .authorization((allow) => [allow.authenticated()])
+    .handler(a.handler.function(generateInvoicePdf)),
+
+  sendInvoiceEmail: a
+    .mutation()
+    .arguments({ 
+      invoiceId: a.string().required(),
+      recipientEmail: a.string().required() 
+    })
+    .returns(a.json())
+    .authorization((allow) => [allow.authenticated()])
+    .handler(a.handler.function(sendInvoiceEmail)),
+
+  downloadInvoicePDF: a
+    .mutation()
+    .arguments({ invoiceId: a.string().required() })
+    .returns(a.json())
+    .authorization((allow) => [allow.authenticated()])
+    .handler(a.handler.function(downloadInvoicePdf)),
+
+  // User Profile Migration (admin only)
+  populateUserProfiles: a
+    .mutation()
+    .returns(a.json())
+    .authorization((allow) => [allow.group('admins')])
+    .handler(a.handler.function(populateUserProfiles)),
 });
 
 export type Schema = ClientSchema<typeof schema>;
@@ -112,8 +289,8 @@ export const data = defineData({
   schema,
   authorizationModes: {
     defaultAuthorizationMode: 'userPool',
-    apiKeyAuthorizationMode: {
-      expiresInDays: 30,
-    },
+//    apiKeyAuthorizationMode: {
+//      expiresInDays: 30,
+//    },
   },
 });

@@ -3,86 +3,93 @@
 import { useState, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../../amplify/data/resource';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation'; // Ajout de useSearchParams
 import Link from 'next/link';
-import type { CreateConsultationInput, PatientListItem } from '../../../types';
+import AutoResizeTextarea from '../../../components/AutoResizeTextarea';
+import ErrorAlert from '../../../components/ErrorAlert';
+import PatientCombobox from '../../../components/PatientCombobox';
+import { useErrorHandler } from '../../../hooks/useErrorHandler';
+import { useDirtyForm } from '../../../contexts/DirtyFormContext';
 
 const client = generateClient<Schema>();
 
+interface ConsultationFormData {
+  patientId: string;
+  date: string;
+  time: string;
+  duration: number;
+  reason: string;
+  notes: string;
+}
+
 export default function NewConsultationPage() {
   const router = useRouter();
-  const [patients, setPatients] = useState<PatientListItem[]>([]);
+  const searchParams = useSearchParams(); // Récupérer les searchParams
+  const { error, errorType, setError, clearError, handleAmplifyResponse } = useErrorHandler();
+  const { addDirtySource, removeDirtySource } = useDirtyForm();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [isDirty, setIsDirty] = useState(false);
+  const [formData, setFormData] = useState<ConsultationFormData>({
     patientId: '',
     date: '',
     time: '',
     duration: 60,
     reason: '',
-    treatment: '',
-    recommendations: '',
-    notes: '',
-    anamnesisSkullCervical: '',
-    anamnesisDigestive: '',
-    anamnesisCardioThoracic: '',
-    anamnesisGynecological: '',
-    anamnesisSleep: '',
-    anamnesisPsychological: '',
-    nextAppointmentDate: '',
-    nextAppointmentTime: ''
+    notes: ''
   });
 
+  // Gestion du dirty state
   useEffect(() => {
-    fetchPatients();
+    if (isDirty) {
+      addDirtySource('consultation-form');
+    } else {
+      removeDirtySource('consultation-form');
+    }
+
+    return () => {
+      removeDirtySource('consultation-form');
+    };
+  }, [isDirty, addDirtySource, removeDirtySource]);
+
+  useEffect(() => {
     // Définir la date et l'heure par défaut à maintenant
     const now = new Date();
     const today = now.toISOString().split('T')[0];
     const currentTime = now.toTimeString().slice(0, 5);
+
+    // Récupérer patientId depuis l'URL
+    const patientIdFromUrl = searchParams.get('patientId');
+
     setFormData(prev => ({
       ...prev,
       date: today,
-      time: currentTime
+      time: currentTime,
+      patientId: patientIdFromUrl || '' // Pré-remplir si disponible
     }));
-  }, []);
-
-  const fetchPatients = async () => {
-    try {
-      const response = await client.models.Patient.list({
-        selectionSet: ['id', 'firstName', 'lastName', 'email', 'createdAt']
-      });
-      
-      // Filtrer et transformer les données pour correspondre au type PatientListItem
-      const validPatients = (response.data || [])
-        .filter(patient => patient.id) // Filtrer les patients avec un id valide
-        .map(patient => ({
-          id: patient.id!,
-          firstName: patient.firstName || null,
-          lastName: patient.lastName || null,
-          email: patient.email || null,
-          phone: null, // Non récupéré dans cette requête
-          dateOfBirth: null, // Non récupéré dans cette requête
-          createdAt: patient.createdAt!
-        }));
-      
-      setPatients(validPatients);
-    } catch (error) {
-      console.error('Erreur lors du chargement des patients:', error);
-    }
-  };
+  }, [searchParams]); // Ajouter searchParams aux dépendances
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    clearError();
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: name === 'duration' ? parseInt(value) : value
     }));
+    setIsDirty(true);
+  };
+
+  const handlePatientChange = (patientId: string) => {
+    setFormData(prev => ({ ...prev, patientId }));
+    clearError();
+    setIsDirty(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.patientId || !formData.date || !formData.time || !formData.reason) {
-      alert('Veuillez remplir les champs obligatoires');
+    clearError();
+
+    if (!formData.patientId || !formData.date || !formData.time) {
+      setError('Veuillez remplir les champs obligatoires: Patient, Date, Heure.', 'warning');
       return;
     }
 
@@ -91,34 +98,24 @@ export default function NewConsultationPage() {
     try {
       // Combiner date et heure
       const consultationDateTime = new Date(`${formData.date}T${formData.time}`);
-      let nextAppointmentDateTime: string | undefined = undefined;
-      if (formData.nextAppointmentDate && formData.nextAppointmentTime) {
-        nextAppointmentDateTime = new Date(`${formData.nextAppointmentDate}T${formData.nextAppointmentTime}`).toISOString();
-      }
 
-      const consultationData: CreateConsultationInput = {
+      const consultationData = {
         patientId: formData.patientId,
         date: consultationDateTime.toISOString(),
-        duration: parseInt(formData.duration.toString()),
+        duration: formData.duration,
         reason: formData.reason,
-        treatment: formData.treatment || undefined,
-        recommendations: formData.recommendations || undefined,
         notes: formData.notes || undefined,
-        anamnesisSkullCervical: formData.anamnesisSkullCervical || undefined,
-        anamnesisDigestive: formData.anamnesisDigestive || undefined,
-        anamnesisCardioThoracic: formData.anamnesisCardioThoracic || undefined,
-        anamnesisGynecological: formData.anamnesisGynecological || undefined,
-        anamnesisSleep: formData.anamnesisSleep || undefined,
-        anamnesisPsychological: formData.anamnesisPsychological || undefined,
-        nextAppointment: nextAppointmentDateTime
       };
 
-      await client.models.Consultation.create(consultationData);
+      const response = await client.models.Consultation.create(consultationData);
+      const createdConsultation = handleAmplifyResponse(response);
       
-      router.push('/consultations');
-    } catch (error) {
-      console.error('Erreur lors de la création de la consultation:', error);
-      alert('Erreur lors de la création de la consultation');
+      if (createdConsultation) {
+        setIsDirty(false); // Marquer comme propre avant la navigation
+        router.push(`/consultations/${createdConsultation.id}`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Erreur lors de la création de la consultation'));
     } finally {
       setLoading(false);
     }
@@ -126,7 +123,7 @@ export default function NewConsultationPage() {
 
   return (
     <div className="space-y-6">
-      {/* En-tête */}
+      {/* Header */}
       <div className="md:flex md:items-center md:justify-between">
         <div className="flex-1 min-w-0">
           <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
@@ -139,344 +136,194 @@ export default function NewConsultationPage() {
         <div className="mt-4 flex md:mt-0 md:ml-4">
           <Link
             href="/consultations"
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            className="mr-3 inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
-            Retour
+            Annuler
           </Link>
         </div>
       </div>
 
-      {/* Formulaire */}
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Informations générales */}
-        <div className="bg-white shadow px-4 py-5 sm:rounded-lg sm:p-6">
-          <div className="md:grid md:grid-cols-3 md:gap-6">
-            <div className="md:col-span-1">
-              <h3 className="text-lg font-medium leading-6 text-gray-900">
-                Informations générales
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Informations de base sur la consultation
-              </p>
-            </div>
-            <div className="mt-5 md:mt-0 md:col-span-2">
-              <div className="grid grid-cols-6 gap-6">
-                {/* Patient */}
-                <div className="col-span-6">
-                  <label htmlFor="patientId" className="block text-sm font-medium text-gray-700">
-                    Patient *
-                  </label>
-                  <select
-                    id="patientId"
-                    name="patientId"
-                    required
-                    value={formData.patientId}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  >
-                    <option value="">Sélectionner un patient</option>
-                    {patients.map((patient) => (
-                      <option key={patient.id} value={patient.id}>
-                        {patient.firstName} {patient.lastName} - {patient.email}
-                      </option>
-                    ))}
-                  </select>
+      {/* Form */}
+      <form onSubmit={handleSubmit}>
+        <div className="shadow sm:overflow-hidden sm:rounded-md">
+          <div className="space-y-6 bg-white px-4 py-5 sm:p-6">
+            {/* General Error using ErrorAlert */}
+            <ErrorAlert
+              error={error}
+              type={errorType}
+              title="Notification"
+              onClose={clearError}
+              dismissible={true}
+            />
+
+            {/* Informations générales */}
+            <div>
+              <div className="md:grid md:grid-cols-3 md:gap-6">
+                <div className="md:col-span-1">
+                  <h3 className="text-lg font-medium leading-6 text-gray-900">Informations générales</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Informations de base sur la consultation
+                  </p>
                 </div>
+                <div className="mt-5 md:col-span-2 md:mt-0">
+                  <div className="grid grid-cols-6 gap-6">
+                    {/* Patient */}
+                    <div className="col-span-6">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Patient *
+                      </label>
+                      <div className="mt-1">
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <PatientCombobox
+                              value={formData.patientId}
+                              onChange={handlePatientChange}
+                              placeholder="Rechercher un patient..."
+                            />
+                          </div>
+                          <Link
+                            href="/patients/new"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            title="Créer un nouveau patient"
+                          >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span className="ml-1 hidden sm:inline">Nouveau patient</span>
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
 
-                {/* Date */}
-                <div className="col-span-6 sm:col-span-3">
-                  <label htmlFor="date" className="block text-sm font-medium text-gray-700">
-                    Date *
-                  </label>
-                  <input
-                    type="date"
-                    id="date"
-                    name="date"
-                    required
-                    value={formData.date}
-                    onChange={handleInputChange}
-                    className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                  />
-                </div>
+                    {/* Motif */}
+                    <div className="col-span-6">
+                      <label htmlFor="reason" className="block text-sm font-medium text-gray-700">
+                        Motif de consultation
+                      </label>
+                      <input
+                        type="text"
+                        id="reason"
+                        name="reason"
+                        value={formData.reason}
+                        onChange={handleInputChange}
+                        placeholder="Ex: Douleur cervicale, Mal de dos..."
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      />
+                    </div>
 
-                {/* Heure */}
-                <div className="col-span-6 sm:col-span-3">
-                  <label htmlFor="time" className="block text-sm font-medium text-gray-700">
-                    Heure *
-                  </label>
-                  <input
-                    type="time"
-                    id="time"
-                    name="time"
-                    required
-                    value={formData.time}
-                    onChange={handleInputChange}
-                    className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                  />
-                </div>
-
-                {/* Durée */}
-                <div className="col-span-6 sm:col-span-3">
-                  <label htmlFor="duration" className="block text-sm font-medium text-gray-700">
-                    Durée (minutes)
-                  </label>
-                  <input
-                    type="number"
-                    id="duration"
-                    name="duration"
-                    min="15"
-                    max="180"
-                    value={formData.duration}
-                    onChange={handleInputChange}
-                    className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                  />
-                </div>
-
-                {/* Motif */}
-                <div className="col-span-6">
-                  <label htmlFor="reason" className="block text-sm font-medium text-gray-700">
-                    Motif de consultation *
-                  </label>
-                  <input
-                    type="text"
-                    id="reason"
-                    name="reason"
-                    required
-                    value={formData.reason}
-                    onChange={handleInputChange}
-                    placeholder="Ex: Douleur cervicale, Mal de dos..."
-                    className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Anamnèse */}
-        <div className="bg-white shadow px-4 py-5 sm:rounded-lg sm:p-6">
-          <div className="md:grid md:grid-cols-3 md:gap-6">
-            <div className="md:col-span-1">
-              <h3 className="text-lg font-medium leading-6 text-gray-900">
-                Anamnèse
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Analyse des différents systèmes corporels
-              </p>
-            </div>
-            <div className="mt-5 md:mt-0 md:col-span-2">
-              <div className="grid grid-cols-1 gap-6">
-                {/* Anamnèse - Crâne, Cervicale */}
-                <div>
-                  <label htmlFor="anamnesisSkullCervical" className="block text-sm font-medium text-gray-700">
-                    Crâne & Cervicale
-                  </label>
-                  <textarea
-                    id="anamnesisSkullCervical"
-                    name="anamnesisSkullCervical"
-                    rows={3}
-                    value={formData.anamnesisSkullCervical}
-                    onChange={handleInputChange}
-                    placeholder="Détails sur crâne, cervicale..."
-                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"
-                  />
-                </div>
-
-                {/* Anamnèse - Système digestif */}
-                <div>
-                  <label htmlFor="anamnesisDigestive" className="block text-sm font-medium text-gray-700">
-                    Système digestif
-                  </label>
-                  <textarea
-                    id="anamnesisDigestive"
-                    name="anamnesisDigestive"
-                    rows={3}
-                    value={formData.anamnesisDigestive}
-                    onChange={handleInputChange}
-                    placeholder="Détails sur le système digestif..."
-                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"
-                  />
-                </div>
-
-                {/* Anamnèse - Cardique / pulmonaire / thoracique */}
-                <div>
-                  <label htmlFor="anamnesisCardioThoracic" className="block text-sm font-medium text-gray-700">
-                    Cardio-thoracique
-                  </label>
-                  <textarea
-                    id="anamnesisCardioThoracic"
-                    name="anamnesisCardioThoracic"
-                    rows={3}
-                    value={formData.anamnesisCardioThoracic}
-                    onChange={handleInputChange}
-                    placeholder="Détails sur le système cardio-thoracique..."
-                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"
-                  />
-                </div>
-
-                {/* Anamnèse - Gynécologique */}
-                <div>
-                  <label htmlFor="anamnesisGynecological" className="block text-sm font-medium text-gray-700">
-                    Gynécologique
-                  </label>
-                  <textarea
-                    id="anamnesisGynecological"
-                    name="anamnesisGynecological"
-                    rows={3}
-                    value={formData.anamnesisGynecological}
-                    onChange={handleInputChange}
-                    placeholder="Détails sur le système gynécologique..."
-                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"
-                  />
-                </div>
-
-                {/* Anamnèse - Sommeil */}
-                <div>
-                  <label htmlFor="anamnesisSleep" className="block text-sm font-medium text-gray-700">
-                    Sommeil
-                  </label>
-                  <textarea
-                    id="anamnesisSleep"
-                    name="anamnesisSleep"
-                    rows={3}
-                    value={formData.anamnesisSleep}
-                    onChange={handleInputChange}
-                    placeholder="Détails sur le sommeil..."
-                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"
-                  />
-                </div>
-
-                {/* Anamnèse - Psychologique / Emotionnel */}
-                <div>
-                  <label htmlFor="anamnesisPsychological" className="block text-sm font-medium text-gray-700">
-                    Psychologique & Émotionnel
-                  </label>
-                  <textarea
-                    id="anamnesisPsychological"
-                    name="anamnesisPsychological"
-                    rows={3}
-                    value={formData.anamnesisPsychological}
-                    onChange={handleInputChange}
-                    placeholder="Détails sur l'état psychologique/émotionnel..."
-                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Traitement et suivi */}
-        <div className="bg-white shadow px-4 py-5 sm:rounded-lg sm:p-6">
-          <div className="md:grid md:grid-cols-3 md:gap-6">
-            <div className="md:col-span-1">
-              <h3 className="text-lg font-medium leading-6 text-gray-900">
-                Traitement et suivi
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Actions réalisées et recommandations
-              </p>
-            </div>
-            <div className="mt-5 md:mt-0 md:col-span-2">
-              <div className="grid grid-cols-1 gap-6">
-                {/* Traitement */}
-                <div>
-                  <label htmlFor="treatment" className="block text-sm font-medium text-gray-700">
-                    Traitement
-                  </label>
-                  <textarea
-                    id="treatment"
-                    name="treatment"
-                    rows={3}
-                    value={formData.treatment}
-                    onChange={handleInputChange}
-                    placeholder="Traitement appliqué pendant la consultation..."
-                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"
-                  />
-                </div>
-
-                {/* Recommandations */}
-                <div>
-                  <label htmlFor="recommendations" className="block text-sm font-medium text-gray-700">
-                    Recommandations
-                  </label>
-                  <textarea
-                    id="recommendations"
-                    name="recommendations"
-                    rows={3}
-                    value={formData.recommendations}
-                    onChange={handleInputChange}
-                    placeholder="Exercices, conseils, recommandations pour le patient..."
-                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"
-                  />
-                </div>
-
-                {/* Prochain RDV */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="nextAppointmentDate" className="block text-sm font-medium text-gray-700">
-                      Prochain RDV - Date
-                    </label>
-                    <input
-                      type="date"
-                      id="nextAppointmentDate"
-                      name="nextAppointmentDate"
-                      value={formData.nextAppointmentDate}
-                      onChange={handleInputChange}
-                      className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="nextAppointmentTime" className="block text-sm font-medium text-gray-700">
-                      Prochain RDV - Heure
-                    </label>
-                    <input
-                      type="time"
-                      id="nextAppointmentTime"
-                      name="nextAppointmentTime"
-                      value={formData.nextAppointmentTime}
-                      onChange={handleInputChange}
-                      className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                    />
+                    {/* Notes */}
+                    <div className="col-span-6">
+                      <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+                        Notes
+                      </label>
+                      <AutoResizeTextarea
+                        id="notes"
+                        name="notes"
+                        rows={2}
+                        value={formData.notes}
+                        onChange={handleInputChange}
+                        placeholder="Notes personnelles, observations..."
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
+              </div>
+            </div>
 
-                {/* Notes */}
-                <div>
-                  <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
-                    Notes privées
-                  </label>
-                  <textarea
-                    id="notes"
-                    name="notes"
-                    rows={2}
-                    value={formData.notes}
-                    onChange={handleInputChange}
-                    placeholder="Notes personnelles, observations..."
-                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"
-                  />
+            <div className="hidden sm:block" aria-hidden="true">
+              <div className="py-5">
+                <div className="border-t border-gray-200" />
+              </div>
+            </div>
+
+            {/* Planification */}
+            <div>
+              <div className="md:grid md:grid-cols-3 md:gap-6">
+                <div className="md:col-span-1">
+                  <h3 className="text-lg font-medium leading-6 text-gray-900">Planification</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Date, heure et durée de la consultation
+                  </p>
+                </div>
+                <div className="mt-5 md:col-span-2 md:mt-0">
+                  <div className="grid grid-cols-6 gap-6">
+                    {/* Date */}
+                    <div className="col-span-6 sm:col-span-2">
+                      <label htmlFor="date" className="block text-sm font-medium text-gray-700">
+                        Date *
+                      </label>
+                      <input
+                        type="date"
+                        id="date"
+                        name="date"
+                        required
+                        value={formData.date}
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      />
+                    </div>
+
+                    {/* Heure */}
+                    <div className="col-span-6 sm:col-span-2">
+                      <label htmlFor="time" className="block text-sm font-medium text-gray-700">
+                        Heure *
+                      </label>
+                      <input
+                        type="time"
+                        id="time"
+                        name="time"
+                        required
+                        value={formData.time}
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      />
+                    </div>
+
+                    {/* Durée */}
+                    <div className="col-span-6 sm:col-span-2">
+                      <label htmlFor="duration" className="block text-sm font-medium text-gray-700">
+                        Durée (minutes)
+                      </label>
+                      <input
+                        type="number"
+                        id="duration"
+                        name="duration"
+                        min="15"
+                        max="180"
+                        value={formData.duration}
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Boutons d'action */}
-        <div className="flex justify-end space-x-3">
-          <Link
-            href="/consultations"
-            className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            Annuler
-          </Link>
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-indigo-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-          >
-            {loading ? 'Enregistrement...' : 'Enregistrer la consultation'}
-          </button>
+          {/* Submit Button */}
+          <div className="bg-gray-50 px-4 py-3 text-right sm:px-6">
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Création...
+                </>
+              ) : (
+                'Créer la consultation'
+              )}
+            </button>
+          </div>
         </div>
       </form>
     </div>

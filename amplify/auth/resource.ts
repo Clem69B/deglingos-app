@@ -22,5 +22,5 @@ export const auth = defineAuth({
       required: false,
     },
   },
-  groups: ['osteopaths', 'assistants'],
+  groups: ['osteopaths', 'assistants', 'admins'],
 });

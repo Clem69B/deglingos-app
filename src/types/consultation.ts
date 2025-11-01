@@ -1,25 +1,27 @@
-import type { BaseEntity } from './common';
+import type { BaseEntity, InvoiceStatus } from './common';
 import type { PatientSummary } from './patient';
+import type { PaymentMethod } from './invoice';
 
 // Interface pour les données d'anamnèse
 export interface AnamnesisData {
-  anamnesisSkullCervical?: string | null;
-  anamnesisDigestive?: string | null;
-  anamnesisCardioThoracic?: string | null;
-  anamnesisGynecological?: string | null;
-  anamnesisSleep?: string | null;
-  anamnesisPsychological?: string | null;
+  skull?: string | null;
+  cervical?: string | null;
+  digestive?: string | null;
+  cardioThoracic?: string | null;
+  gynecological?: string | null;
+  sleep?: string | null;
+  psychological?: string | null;
 }
 
 // Interface de base pour les consultations
-export interface ConsultationBaseData extends AnamnesisData {
+export interface ConsultationBaseData {
   date: string; // ISO datetime string
   duration?: number | null;
   reason: string;
+  anamnesis?: AnamnesisData | null;
   treatment?: string | null;
   recommendations?: string | null;
   notes?: string | null;
-  nextAppointment?: string | null; // ISO datetime string
 }
 
 // Type pour créer une consultation (avec patientId)
@@ -50,6 +52,12 @@ export interface ConsultationListItem {
 export interface ConsultationWithPatient extends ConsultationBaseData, BaseEntity {
   patientId?: string;
   patient?: PatientSummary | null;
+  owner?: string | null;
+  invoice?: {
+    id: string;
+    status?: InvoiceStatus | null;
+    paymentMethod?: PaymentMethod | null;
+  } | null;
 }
 
 // Type pour résumé de consultation (utilisé dans le profil patient)

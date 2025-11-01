@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+**/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -44,3 +45,6 @@ next-env.d.ts
 .amplify
 amplify_outputs*
 amplifyconfiguration
+
+# version info (generated at build time)
+src/lib/version.json

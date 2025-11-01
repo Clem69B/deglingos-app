@@ -8,10 +8,11 @@ export interface PatientBaseData extends PersonBaseData {
   postalCode?: string | null;
   gender?: Gender | null;
   profession?: string | null;
-  emergencyContact?: string | null;
+  referringPhysician?: string | null;
   medicalHistory?: string | null;
-  allergies?: string | null;
+  surgicalHistory?: string | null;
   currentMedications?: string | null;
+  activities?: string | null;
 }
 
 // Type pour créer un patient (sans ID)
@@ -47,10 +48,11 @@ export interface PatientFormData {
   postalCode: string;
   gender: Gender | '';
   profession: string;
-  emergencyContact: string;
+  referringPhysician: string;
   medicalHistory: string;
-  allergies: string;
+  surgicalHistory: string;
   currentMedications: string;
+  activities: string;
 }
 
 // Type pour un résumé minimal de patient (utilisé dans les consultations)
@@ -61,4 +63,7 @@ export interface PatientSummary {
   email?: string | null;
   phone?: string | null;
   dateOfBirth?: string | null;
+  medicalHistory?: string | null;
+  surgicalHistory?: string | null;
+  activities?: string | null;
 }

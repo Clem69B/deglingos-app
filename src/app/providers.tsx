@@ -1,8 +1,34 @@
 'use client';
 
-import { Authenticator } from '@aws-amplify/ui-react';
+import { Authenticator, useAuthenticator } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
 import '../lib/amplify';
+import { DirtyFormProvider } from '../contexts/DirtyFormContext';
+import { useUserCache } from '../hooks/useUserCache';
+import { useEffect, useRef } from 'react';
+
+// Composant wrapper qui gère le nettoyage du cache lors de chaque authentification réussie
+function AuthWrapper({ children }: { children: React.ReactNode }) {
+  const { authStatus } = useAuthenticator((context) => [context.authStatus]);
+  const { clearCache } = useUserCache();
+  const hasAuthenticatedRef = useRef(false);
+
+  useEffect(() => {
+    // Si l'utilisateur vient de se connecter avec succès
+    if (authStatus === 'authenticated' && !hasAuthenticatedRef.current) {
+      console.log('Authentification réussie, nettoyage du cache utilisateur');
+      clearCache();
+      hasAuthenticatedRef.current = true;
+    }
+    
+    // Reset le flag quand l'utilisateur se déconnecte
+    if (authStatus !== 'authenticated') {
+      hasAuthenticatedRef.current = false;
+    }
+  }, [authStatus, clearCache]);
+
+  return <>{children}</>;
+}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -49,9 +75,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
       }}
     >
       {() => (
-        <div className="min-h-screen bg-gray-50">
-          {children}
-        </div>
+        <DirtyFormProvider>
+          <AuthWrapper>
+            <div className="min-h-screen bg-gray-50">
+              {children}
+            </div>
+          </AuthWrapper>
+        </DirtyFormProvider>
       )}
     </Authenticator>
   );

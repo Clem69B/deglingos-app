@@ -1,16 +1,19 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
+import ProtectedLink from './ProtectedLink';
+import { UserName } from './users';
+import { useDirtyForm } from '../contexts/DirtyFormContext';
 
 const navigation = [
   { name: 'Tableau de bord', href: '/', icon: HomeIcon },
   { name: 'Patients', href: '/patients', icon: UsersIcon },
   { name: 'Consultations', href: '/consultations', icon: ClipboardDocumentListIcon },
   { name: 'Facturation', href: '/invoices', icon: DocumentTextIcon },
-  { name: 'Agenda', href: '/appointments', icon: CalendarDaysIcon },
+  { name: 'Comptabilité', href: '/accounting', icon: ChartBarIcon },
+/*  { name: 'Agenda', href: '/appointments', icon: CalendarDaysIcon }, */
   { name: 'Paramètres', href: '/settings', icon: CogIcon },
 ];
 
@@ -46,10 +49,20 @@ function DocumentTextIcon(props: React.ComponentProps<'svg'>) {
   );
 }
 
+/*
 function CalendarDaysIcon(props: React.ComponentProps<'svg'>) {
   return (
     <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+    </svg>
+  );
+}
+*/
+
+function ChartBarIcon(props: React.ComponentProps<'svg'>) {
+  return (
+    <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
     </svg>
   );
 }
@@ -103,6 +116,16 @@ export default function Navigation() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, signOut } = useAuthenticator((context) => [context.user]);
+  const { isPageDirty } = useDirtyForm(); // Obtenir l'état dirty global
+
+  const handleSignOut = () => {
+    if (isPageDirty) {
+      if (!window.confirm('Vous avez des modifications non enregistrées. Êtes-vous sûr de vouloir vous déconnecter ?')) {
+        return; // Empêche la déconnexion
+      }
+    }
+    signOut();
+  }
 
   return (
     <nav className="bg-white shadow">
@@ -111,9 +134,12 @@ export default function Navigation() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-12">
             <div className="flex-shrink-0">
-              <Link href="/" className="text-xl font-bold text-indigo-600">
+              <ProtectedLink href="/" 
+                className="text-xl font-bold text-indigo-600"
+                isDirty={isPageDirty}
+              >
                 Degling&apos;Os
-              </Link>
+              </ProtectedLink>
             </div>
             
             {/* User info and actions - Desktop */}
@@ -122,10 +148,13 @@ export default function Navigation() {
                 <>
                   <div className="flex items-center text-sm text-gray-700">
                     <UserIcon className="w-4 h-4 mr-2" />
-                    <span>{user?.signInDetails?.loginId || "Utilisateur"}</span>
+                    <UserName 
+                      userId={user?.userId} 
+                      fallback={user?.signInDetails?.loginId || "Utilisateur"} 
+                    />
                   </div>
                   <button
-                    onClick={signOut}
+                    onClick={handleSignOut}
                     className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                   >
                     <ArrowRightOnRectangleIcon className="w-4 h-4 mr-1" />
@@ -162,9 +191,10 @@ export default function Navigation() {
               const isActive = pathname === item.href || 
                 (item.href !== '/' && pathname.startsWith(item.href));
               return (
-                <Link
+                <ProtectedLink
                   key={item.name}
                   href={item.href}
+                  isDirty={isPageDirty}
                   className={classNames(
                     isActive
                       ? 'border-indigo-500 text-gray-900'
@@ -174,7 +204,7 @@ export default function Navigation() {
                 >
                   <item.icon className="w-4 h-4 mr-2" />
                   {item.name}
-                </Link>
+                </ProtectedLink>
               );
             })}
           </div>
@@ -189,22 +219,22 @@ export default function Navigation() {
               const isActive = pathname === item.href || 
                 (item.href !== '/' && pathname.startsWith(item.href));
               return (
-                <Link
+                <ProtectedLink
                   key={item.name}
                   href={item.href}
+                  isDirty={isPageDirty}
                   className={classNames(
                     isActive
                       ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
                       : 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700',
                     'block pl-3 pr-4 py-2 border-l-4 text-base font-medium'
                   )}
-                  onClick={() => setMobileMenuOpen(false)}
                 >
                   <div className="flex items-center">
                     <item.icon className="w-5 h-5 mr-3" />
                     {item.name}
                   </div>
-                </Link>
+                </ProtectedLink>
               );
             })}
           </div>
@@ -217,14 +247,17 @@ export default function Navigation() {
                   <UserIcon className="w-8 h-8 text-gray-400" />
                   <div className="ml-3">
                     <div className="text-base font-medium text-gray-800">
-                      {user?.signInDetails?.loginId || "Utilisateur"}
+                      <UserName 
+                        userId={user?.userId} 
+                        fallback={user?.signInDetails?.loginId || "Utilisateur"} 
+                      />
                     </div>
                   </div>
                 </div>
               </div>
               <div className="mt-3 px-2">
                 <button
-                  onClick={signOut}
+                  onClick={handleSignOut} // Utiliser le gestionnaire personnalisé
                   className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-50"
                 >
                   <div className="flex items-center">
