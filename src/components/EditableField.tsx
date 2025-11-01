@@ -275,9 +275,22 @@ const EditableField: React.FC<EditableFieldProps> = ({
           onKeyDown={(e) => { if (!disabled && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setIsEditingField(true);}}}
         >
           <span className="whitespace-pre-wrap break-words flex-grow">
-            {inputType === 'datetime-local' && displayFormatFunction && typeof currentValue === 'string'
-              ? displayFormatFunction(currentValue)
-              : currentValue || <span className="text-gray-400 italic">{placeholder || 'Non renseigné'}</span>}
+            {(() => {
+              // 1) If a display formatter is provided, always prefer it
+              if (displayFormatFunction) {
+                return displayFormatFunction(currentValue ?? null);
+              }
+              // 2) For select fields, map stored value to its label
+              if (inputType === 'select' && options && options.length) {
+                const currentStr = (currentValue ?? '').toString();
+                const match = options.find(opt => opt.value === currentStr);
+                if (match) return match.label;
+                // Fallback to raw value if not found
+                return currentStr || <span className="text-gray-400 italic">{placeholder || 'Non renseigné'}</span>;
+              }
+              // 3) Generic fallback
+              return currentValue || <span className="text-gray-400 italic">{placeholder || 'Non renseigné'}</span>;
+            })()}
           </span>
           {/* L'icône de modification (crayon) n'est plus affichée ici, le clic sur la zone suffit */}
         </div>
