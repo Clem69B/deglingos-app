@@ -33,6 +33,6 @@ export interface AppointmentFormData {
   date: string;
   time: string;
   duration: string;
-  status: AppointmentStatus | '';
+  status: AppointmentStatus;
   notes: string;
 }

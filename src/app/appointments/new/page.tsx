@@ -94,7 +94,7 @@ export default function NewAppointmentPage() {
       const appointmentData = {
         patientId: formData.patientId,
         date: appointmentDateTime.toISOString(),
-        duration: parseInt(formData.duration),
+        duration: parseInt(formData.duration, 10),
         status: formData.status as AppointmentStatus,
         notes: formData.notes || undefined,
         source: 'manual'
@@ -107,9 +107,7 @@ export default function NewAppointmentPage() {
         setIsDirty(false);
         router.push('/appointments');
       } else {
-        if (!error) {
-          setError('Une erreur est survenue lors de la création du rendez-vous. Réponse invalide.', 'error');
-        }
+        setError('Une erreur est survenue lors de la création du rendez-vous. Réponse invalide.', 'error');
       }
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Une erreur est survenue lors de la création du rendez-vous.'));
