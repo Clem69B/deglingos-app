@@ -33,10 +33,13 @@ const InvoiceDetails = ({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const emailTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(true);
 
-  // Cleanup timeout on unmount
+  // Cleanup timeout on unmount and track mounted state
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
+      isMountedRef.current = false;
       if (emailTimeoutRef.current) {
         clearTimeout(emailTimeoutRef.current);
       }
@@ -86,7 +89,9 @@ const InvoiceDetails = ({
       
       // Re-enable button after cooldown period
       emailTimeoutRef.current = setTimeout(() => {
-        setIsSendingEmail(false);
+        if (isMountedRef.current) {
+          setIsSendingEmail(false);
+        }
         emailTimeoutRef.current = null;
       }, EMAIL_COOLDOWN_MS);
     } catch (err) {
