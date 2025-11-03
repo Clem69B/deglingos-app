@@ -64,7 +64,13 @@ export default function Dashboard() {
         </div>
         <div className="mt-4 flex md:mt-0 md:ml-4">
           <Link
-            href="/patients/nouveau"
+            href="/appointments/new"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+          >
+            Nouveau rendez-vous
+          </Link>
+          <Link
+            href="/patients/new"
             className="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
             Nouveau patient
@@ -293,8 +299,6 @@ export default function Dashboard() {
             </div>
           </Link>
           
-          {/* Agenda - Disabled for now */}
-          {/*
           <Link
             href="/appointments"
             className="relative rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm flex items-center space-x-3 hover:border-gray-400 focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500 transition-colors"
@@ -322,7 +326,6 @@ export default function Dashboard() {
               </p>
             </div>
           </Link>
-          */}
         </div>
       </div>
 

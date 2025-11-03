@@ -11,5 +11,6 @@ export type UserProfile = Schema['UserProfile']['type'];
 export * from './patient';
 export * from './consultation';
 export * from './invoice';
+export * from './appointment';
 export * from './common';
 export * from './user-profile';

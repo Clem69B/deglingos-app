@@ -1,0 +1,284 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { generateClient } from 'aws-amplify/data';
+import type { Schema } from '../../../../amplify/data/resource';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import AutoResizeTextarea from '../../../components/AutoResizeTextarea';
+import ErrorAlert from '../../../components/ErrorAlert';
+import PatientCombobox from '../../../components/PatientCombobox';
+import { useErrorHandler } from '../../../hooks/useErrorHandler';
+import { useDirtyForm } from '../../../contexts/DirtyFormContext';
+import type { AppointmentFormData, AppointmentStatus } from '../../../types/appointment';
+
+const client = generateClient<Schema>();
+
+export default function NewAppointmentPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { error, errorType, setError, clearError, handleAmplifyResponse } = useErrorHandler();
+  const { addDirtySource, removeDirtySource } = useDirtyForm();
+  const [loading, setLoading] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const [formData, setFormData] = useState<AppointmentFormData>({
+    patientId: '',
+    date: '',
+    time: '',
+    duration: '60',
+    status: 'SCHEDULED',
+    notes: ''
+  });
+
+  // Manage dirty state
+  useEffect(() => {
+    if (isDirty) {
+      addDirtySource('appointment-form');
+    } else {
+      removeDirtySource('appointment-form');
+    }
+
+    return () => {
+      removeDirtySource('appointment-form');
+    };
+  }, [isDirty, addDirtySource, removeDirtySource]);
+
+  useEffect(() => {
+    // Set default date and time to now
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const currentTime = now.toTimeString().slice(0, 5);
+
+    // Get patientId from URL if provided
+    const patientIdFromUrl = searchParams.get('patientId');
+
+    setFormData(prev => ({
+      ...prev,
+      date: today,
+      time: currentTime,
+      patientId: patientIdFromUrl || ''
+    }));
+  }, [searchParams]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    clearError();
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    setIsDirty(true);
+  };
+
+  const handlePatientChange = (patientId: string) => {
+    setFormData(prev => ({ ...prev, patientId }));
+    clearError();
+    setIsDirty(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearError();
+
+    if (!formData.patientId || !formData.date || !formData.time) {
+      setError('Veuillez remplir les champs obligatoires: Patient, Date, Heure.', 'warning');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Combine date and time
+      const appointmentDateTime = new Date(`${formData.date}T${formData.time}`);
+
+      const appointmentData = {
+        patientId: formData.patientId,
+        date: appointmentDateTime.toISOString(),
+        duration: parseInt(formData.duration),
+        status: formData.status as AppointmentStatus,
+        notes: formData.notes || undefined,
+        source: 'manual'
+      };
+
+      const response = await client.models.Appointment.create(appointmentData);
+      const createdAppointment = handleAmplifyResponse(response);
+
+      if (createdAppointment) {
+        setIsDirty(false);
+        router.push('/appointments');
+      } else {
+        if (!error) {
+          setError('Une erreur est survenue lors de la création du rendez-vous. Réponse invalide.', 'error');
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Une erreur est survenue lors de la création du rendez-vous.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="md:flex md:items-center md:justify-between">
+        <div className="flex-1 min-w-0">
+          <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+            Nouveau Rendez-vous
+          </h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Planifier un nouveau rendez-vous
+          </p>
+        </div>
+        <div className="mt-4 flex md:mt-0 md:ml-4">
+          <Link
+            href="/appointments"
+            className="mr-3 inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Annuler
+          </Link>
+        </div>
+      </div>
+
+      {/* Form */}
+      <form onSubmit={handleSubmit}>
+        <div className="shadow sm:overflow-hidden sm:rounded-md">
+          <div className="space-y-6 bg-white px-4 py-5 sm:p-6">
+            <ErrorAlert
+              error={error}
+              type={errorType}
+              title="Notification"
+              onClose={clearError}
+              dismissible={true}
+            />
+
+            {/* Appointment Information */}
+            <div>
+              <div className="md:grid md:grid-cols-3 md:gap-6">
+                <div className="md:col-span-1">
+                  <h3 className="text-lg font-medium leading-6 text-gray-900">Informations du rendez-vous</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Détails du rendez-vous et patient concerné.
+                  </p>
+                </div>
+                <div className="mt-5 md:col-span-2 md:mt-0">
+                  <div className="grid grid-cols-6 gap-6">
+                    <div className="col-span-6">
+                      <label htmlFor="patientId" className="block text-sm font-medium text-gray-700">
+                        Patient *
+                      </label>
+                      <PatientCombobox
+                        value={formData.patientId}
+                        onChange={handlePatientChange}
+                      />
+                    </div>
+
+                    <div className="col-span-6 sm:col-span-3">
+                      <label htmlFor="date" className="block text-sm font-medium text-gray-700">
+                        Date *
+                      </label>
+                      <input
+                        type="date"
+                        id="date"
+                        name="date"
+                        value={formData.date}
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        required
+                      />
+                    </div>
+
+                    <div className="col-span-6 sm:col-span-3">
+                      <label htmlFor="time" className="block text-sm font-medium text-gray-700">
+                        Heure *
+                      </label>
+                      <input
+                        type="time"
+                        id="time"
+                        name="time"
+                        value={formData.time}
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        required
+                      />
+                    </div>
+
+                    <div className="col-span-6 sm:col-span-3">
+                      <label htmlFor="duration" className="block text-sm font-medium text-gray-700">
+                        Durée (minutes)
+                      </label>
+                      <input
+                        type="number"
+                        id="duration"
+                        name="duration"
+                        value={formData.duration}
+                        onChange={handleInputChange}
+                        min="15"
+                        step="15"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      />
+                    </div>
+
+                    <div className="col-span-6 sm:col-span-3">
+                      <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+                        Statut
+                      </label>
+                      <select
+                        id="status"
+                        name="status"
+                        value={formData.status}
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      >
+                        <option value="SCHEDULED">Planifié</option>
+                        <option value="CONFIRMED">Confirmé</option>
+                        <option value="CANCELLED">Annulé</option>
+                        <option value="COMPLETED">Terminé</option>
+                      </select>
+                    </div>
+
+                    <div className="col-span-6">
+                      <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+                        Notes
+                      </label>
+                      <AutoResizeTextarea
+                        id="notes"
+                        name="notes"
+                        rows={3}
+                        value={formData.notes}
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        placeholder="Notes sur le rendez-vous..."
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <div className="bg-gray-50 px-4 py-3 text-right sm:px-6">
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Création...
+                </>
+              ) : (
+                'Créer le rendez-vous'
+              )}
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  );
+}
