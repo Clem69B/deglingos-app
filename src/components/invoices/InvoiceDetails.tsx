@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { Invoice } from '@/types/invoice';
 import Link from 'next/link';
 import EditableField from '../EditableField';
+import ErrorAlert from '../ErrorAlert';
 import { getStatusBadgeColor, translateStatus } from '@/lib/invoiceStatus';
 
 interface InvoiceDetailsProps {
@@ -27,6 +28,8 @@ const InvoiceDetails = ({
   downloadInvoicePDF,
   isUpdatingStatus,
 }: InvoiceDetailsProps) => {
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   const handleUpdate = async (_entityId: string, fieldName: string, value: unknown) => {
     try {
@@ -58,9 +61,18 @@ const InvoiceDetails = ({
 
   const onSendEmail = async () => {
     try {
+      setIsSendingEmail(true);
+      setSuccessMessage(null);
       await sendInvoiceEmail(invoice.id);
+      setSuccessMessage('Email envoyé avec succès !');
+      
+      // Re-enable button after 5 seconds
+      setTimeout(() => {
+        setIsSendingEmail(false);
+      }, 5000);
     } catch (err) {
       console.error('Failed to send invoice email', err);
+      setIsSendingEmail(false);
     }
   };
 
@@ -74,6 +86,17 @@ const InvoiceDetails = ({
 
   return (
     <div className="form-card overflow-hidden">
+      {successMessage && (
+        <div className="mb-4">
+          <ErrorAlert 
+            error={successMessage}
+            type="info"
+            autoClose={true}
+            autoCloseDelay={5000}
+            onClose={() => setSuccessMessage(null)}
+          />
+        </div>
+      )}
       <div className="detail-header">
         <div>
           <h3 className="text-lg leading-6 font-medium text-gray-900">
@@ -113,9 +136,9 @@ const InvoiceDetails = ({
             {invoice.status !== 'DRAFT' && (<button
               className="btn btn-secondary"
               onClick={onSendEmail}
-              disabled={!invoice.patient?.email}
+              disabled={!invoice.patient?.email || isSendingEmail}
             >
-              Envoyé par email
+              {isSendingEmail ? 'Envoi en cours...' : 'Envoyé par email'}
             </button>
             )}
 
