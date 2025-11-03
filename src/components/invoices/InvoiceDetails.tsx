@@ -7,6 +7,8 @@ import EditableField from '../EditableField';
 import ErrorAlert from '../ErrorAlert';
 import { getStatusBadgeColor, translateStatus } from '@/lib/invoiceStatus';
 
+const EMAIL_COOLDOWN_MS = 5000;
+
 interface InvoiceDetailsProps {
   invoice: Invoice;
   updateField: (fieldName: string, value: unknown) => Promise<void>;
@@ -82,11 +84,11 @@ const InvoiceDetails = ({
       await sendInvoiceEmail(invoice.id);
       setSuccessMessage('Email envoyé avec succès !');
       
-      // Re-enable button after 5 seconds
+      // Re-enable button after cooldown period
       emailTimeoutRef.current = setTimeout(() => {
         setIsSendingEmail(false);
         emailTimeoutRef.current = null;
-      }, 5000);
+      }, EMAIL_COOLDOWN_MS);
     } catch (err) {
       console.error('Failed to send invoice email', err);
       setIsSendingEmail(false);
@@ -109,7 +111,7 @@ const InvoiceDetails = ({
             error={successMessage}
             type="info"
             autoClose={true}
-            autoCloseDelay={5000}
+            autoCloseDelay={EMAIL_COOLDOWN_MS}
             onClose={() => setSuccessMessage(null)}
           />
         </div>
