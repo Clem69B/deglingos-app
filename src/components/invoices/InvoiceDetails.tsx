@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { Invoice } from '@/types/invoice';
 import Link from 'next/link';
 import EditableField from '../EditableField';
@@ -30,6 +30,16 @@ const InvoiceDetails = ({
 }: InvoiceDetailsProps) => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const emailTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (emailTimeoutRef.current) {
+        clearTimeout(emailTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleUpdate = async (_entityId: string, fieldName: string, value: unknown) => {
     try {
@@ -63,12 +73,19 @@ const InvoiceDetails = ({
     try {
       setIsSendingEmail(true);
       setSuccessMessage(null);
+      
+      // Clear any existing timeout
+      if (emailTimeoutRef.current) {
+        clearTimeout(emailTimeoutRef.current);
+      }
+      
       await sendInvoiceEmail(invoice.id);
       setSuccessMessage('Email envoyé avec succès !');
       
       // Re-enable button after 5 seconds
-      setTimeout(() => {
+      emailTimeoutRef.current = setTimeout(() => {
         setIsSendingEmail(false);
+        emailTimeoutRef.current = null;
       }, 5000);
     } catch (err) {
       console.error('Failed to send invoice email', err);
