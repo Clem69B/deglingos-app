@@ -150,7 +150,7 @@ if (isProduction) {
       scheduleExpression: Schedule.cron({
         minute: "0",
         hour: "0",
-        day: "*/7",
+        weekDay: "1",
         month: "*",
         year: "*",
       }),
