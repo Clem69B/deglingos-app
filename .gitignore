@@ -48,3 +48,4 @@ amplifyconfiguration
 
 # version info (generated at build time)
 src/lib/version.json
+amplify_outputs.json
