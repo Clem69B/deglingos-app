@@ -162,7 +162,7 @@ const InvoiceDetails = ({
               onClick={onSendEmail}
               disabled={!invoice.patient?.email || isSendingEmail}
             >
-              {isSendingEmail ? 'Envoi en cours...' : 'Envoyé par email'}
+              {isSendingEmail ? 'Envoi en cours...' : 'Envoyer par email'}
             </button>
             )}
 
