@@ -173,7 +173,7 @@ export default function PatientDetailPage() {
         processedValue = newValue.trim();
       }
       // Pour les champs optionnels, si la valeur après trim est vide, la mettre à null
-      if (processedValue === '' && ['email', 'phone', 'dateOfBirth', 'address', 'city', 'postalCode', 'gender', 'profession', 'referringPhysician', 'medicalHistory', 'surgicalHistory', 'currentMedications', 'activities'].includes(fieldName)) {
+      if (processedValue === '' && ['email', 'phone', 'dateOfBirth', 'address', 'city', 'postalCode', 'gender', 'profession', 'referringPhysician', 'medicalHistory', 'surgicalHistory', 'currentMedications', 'currentTreatment', 'activities'].includes(fieldName)) {
         processedValue = null;
       }
 
@@ -692,6 +692,16 @@ export default function PatientDetailPage() {
                 updateFunction={updatePatientField}
                 inputType="textarea"
                 placeholder="Nom du médicament, dosage, fréquence"
+                onDirtyStateChange={handleDirtyStateChange}
+              />
+              <EditableField
+                label="Traitement en cours"
+                fieldName="currentTreatment"
+                value={patient.currentTreatment}
+                entityId={patientId}
+                updateFunction={updatePatientField}
+                inputType="textarea"
+                placeholder="Traitement actuel suivi par le patient"
                 onDirtyStateChange={handleDirtyStateChange}
               />
               <EditableField

@@ -91,7 +91,7 @@ export default function ConsultationDetailPage() {
             'anamnesis.sleep', 'anamnesis.psychological',
             'patient.id', 'patient.firstName', 'patient.lastName', 
             'patient.email', 'patient.phone', 'patient.dateOfBirth',
-            'patient.medicalHistory', 'patient.surgicalHistory', 'patient.activities',
+            'patient.medicalHistory', 'patient.surgicalHistory', 'patient.currentTreatment', 'patient.activities',
             'invoice.id', 'invoice.status', 'invoice.paymentMethod'
           ]
         }
@@ -235,6 +235,62 @@ export default function ConsultationDetailPage() {
       }
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const updatePatientField = async (entityId: string, fieldName: string, newValue: string | number | boolean | null | undefined) => {
+    if (!consultation || !consultation.patient) return;
+    clearError();
+
+    const oldPatientData = { ...consultation.patient };
+    
+    // Optimistic update of local state
+    setConsultation(prev => prev ? { 
+      ...prev, 
+      patient: prev.patient ? { ...prev.patient, [fieldName]: newValue } : prev.patient 
+    } : null);
+
+    try {
+      const updateData: { id: string; [key: string]: string | number | boolean | null | undefined } = {
+        id: entityId,
+      };
+
+      let processedValue = newValue;
+      if (typeof newValue === 'string') {
+        processedValue = newValue.trim();
+      }
+      
+      // For optional fields, if the value after trim is empty, set it to null
+      const optionalFields = ['currentTreatment'];
+      
+      if (processedValue === '' && optionalFields.includes(fieldName)) {
+        processedValue = null;
+      }
+
+      updateData[fieldName] = processedValue;
+
+      const response = await client.models.Patient.update(updateData);
+      
+      if (!handleAmplifyResponse(response)) {
+        if (!error) {
+          setError(`Erreur lors de la mise à jour du champ '${fieldName}'.`);
+        }
+        setConsultation(prev => prev ? { ...prev, patient: oldPatientData } : null);
+        throw new Error(`Erreur lors de la mise à jour du champ '${fieldName}'.`);
+      }
+      
+      // Re-fetch consultation data to get the correct shape with relations
+      await fetchConsultation(consultationId);
+
+    } catch (err) {
+      console.error(`Error in updatePatientField for ${fieldName}:`, err);
+      setConsultation(prev => prev ? { ...prev, patient: oldPatientData } : null);
+      
+      if (!(err instanceof Error && (err.message.includes("Amplify") || error))) {
+        const errorMessage = err instanceof Error ? err.message : `Une erreur est survenue lors de la mise à jour du champ '${fieldName}'.`;
+        setError(errorMessage, 'error');
+      }
+      throw err;
     }
   };
 
@@ -559,6 +615,18 @@ export default function ConsultationDetailPage() {
                     <p className="ml-2 text-gray-900 whitespace-pre-wrap">{consultation.patient.surgicalHistory}</p>
                   </div>
                 )}
+                <div>
+                  <EditableField
+                    label="Traitement en cours"
+                    value={consultation.patient?.currentTreatment}
+                    fieldName="currentTreatment"
+                    entityId={consultation.patient?.id || ''}
+                    updateFunction={updatePatientField}
+                    inputType="textarea"
+                    placeholder="Traitement actuel suivi par le patient"
+                    onDirtyStateChange={handleDirtyStateChange}
+                  />
+                </div>
                 {consultation.patient?.activities && (
                   <div className="text-sm">
                     <span className="font-medium text-gray-500">Activité:</span>

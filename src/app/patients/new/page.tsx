@@ -32,6 +32,7 @@ export default function NewPatientPage() {
     medicalHistory: '',
     surgicalHistory: '',
     currentMedications: '',
+    currentTreatment: '',
     activities: '',
   });
 
@@ -100,6 +101,7 @@ export default function NewPatientPage() {
       if (formData.medicalHistory.trim()) patientData.medicalHistory = formData.medicalHistory.trim();
       if (formData.surgicalHistory.trim()) patientData.surgicalHistory = formData.surgicalHistory.trim();
       if (formData.currentMedications.trim()) patientData.currentMedications = formData.currentMedications.trim();
+      if (formData.currentTreatment.trim()) patientData.currentTreatment = formData.currentTreatment.trim();
       if (formData.activities.trim()) patientData.activities = formData.activities.trim();
 
       const response = await client.models.Patient.create(patientData);
@@ -443,6 +445,21 @@ export default function NewPatientPage() {
                         onChange={handleInputChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                         placeholder="Médicaments et dosages actuels"
+                      />
+                    </div>
+
+                    <div className="col-span-6">
+                      <label htmlFor="currentTreatment" className="block text-sm font-medium text-gray-700">
+                        Traitement en cours
+                      </label>
+                      <AutoResizeTextarea
+                        id="currentTreatment"
+                        name="currentTreatment"
+                        rows={2}
+                        value={formData.currentTreatment}
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        placeholder="Traitement actuel suivi par le patient"
                       />
                     </div>
 
