@@ -1,10 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { Invoice } from '@/types/invoice';
 import Link from 'next/link';
 import EditableField from '../EditableField';
+import ErrorAlert from '../ErrorAlert';
 import { getStatusBadgeColor, translateStatus } from '@/lib/invoiceStatus';
+
+const EMAIL_COOLDOWN_MS = 5000;
 
 interface InvoiceDetailsProps {
   invoice: Invoice;
@@ -27,6 +30,21 @@ const InvoiceDetails = ({
   downloadInvoicePDF,
   isUpdatingStatus,
 }: InvoiceDetailsProps) => {
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const emailTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(true);
+
+  // Cleanup timeout on unmount and track mounted state
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (emailTimeoutRef.current) {
+        clearTimeout(emailTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleUpdate = async (_entityId: string, fieldName: string, value: unknown) => {
     try {
@@ -58,9 +76,27 @@ const InvoiceDetails = ({
 
   const onSendEmail = async () => {
     try {
+      setIsSendingEmail(true);
+      setSuccessMessage(null);
+      
+      // Clear any existing timeout
+      if (emailTimeoutRef.current) {
+        clearTimeout(emailTimeoutRef.current);
+      }
+      
       await sendInvoiceEmail(invoice.id);
+      setSuccessMessage('Email envoyé avec succès !');
+      
+      // Re-enable button after cooldown period
+      emailTimeoutRef.current = setTimeout(() => {
+        if (isMountedRef.current) {
+          setIsSendingEmail(false);
+        }
+        emailTimeoutRef.current = null;
+      }, EMAIL_COOLDOWN_MS);
     } catch (err) {
       console.error('Failed to send invoice email', err);
+      setIsSendingEmail(false);
     }
   };
 
@@ -74,6 +110,17 @@ const InvoiceDetails = ({
 
   return (
     <div className="form-card overflow-hidden">
+      {successMessage && (
+        <div className="mb-4">
+          <ErrorAlert 
+            error={successMessage}
+            type="info"
+            autoClose={true}
+            autoCloseDelay={EMAIL_COOLDOWN_MS}
+            onClose={() => setSuccessMessage(null)}
+          />
+        </div>
+      )}
       <div className="detail-header">
         <div>
           <h3 className="text-lg leading-6 font-medium text-gray-900">
@@ -113,9 +160,9 @@ const InvoiceDetails = ({
             {invoice.status !== 'DRAFT' && (<button
               className="btn btn-secondary"
               onClick={onSendEmail}
-              disabled={!invoice.patient?.email}
+              disabled={!invoice.patient?.email || isSendingEmail}
             >
-              Envoyé par email
+              {isSendingEmail ? 'Envoi en cours...' : 'Envoyer par email'}
             </button>
             )}
 

@@ -383,9 +383,16 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
   const sendInvoiceEmail = async (id: string) => {
     onError('');
     try {
-      // Ensure we have the latest invoice and patient email
-      const current = await getInvoiceById(id);
-      if (!current) throw new Error('Invoice not found');
+      // Get current invoice without triggering loading state change
+      let current = invoice;
+      
+      // Only fetch if we don't have the invoice or it's a different one
+      if (!current || current.id !== id) {
+        const { data, errors } = await client.models.Invoice.get({ id });
+        if (errors) throw errors;
+        if (!data) throw new Error('Invoice not found');
+        current = await _resolveInvoiceRelationships(data);
+      }
 
       const email = current.patient?.email;
       if (!email) throw new Error('No patient email found for this invoice');
