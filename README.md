@@ -1,10 +1,13 @@
 # Deglingos App
 
-A medical practice management application for handling patients, consultations, invoices, and appointments.
+A medical practice management application for osteopaths to handle patients, consultations, and invoicing.
 
 ## Overview
 
-This is a personal project built to manage the daily operations of a medical practice. It provides tools for patient management, consultation tracking, invoice generation, and appointment scheduling.
+This is a personal project built to manage the daily operations of an osteopathy practice. It provides tools for patient management, consultation tracking, and invoice generation.
+
+> **⚠️ Data Responsibility Disclaimer**  
+> Although the AWS solutions used in this application are HDS-approved (Hébergeur de Données de Santé), you are solely responsible for the data you process and store. Ensure compliance with applicable healthcare data protection regulations (GDPR, etc.).
 
 ## Tech Stack
 
@@ -71,7 +74,6 @@ src/
 │   ├── consultations/# Consultation tracking
 │   ├── invoices/     # Invoice generation
 │   ├── accounting/   # Accounting dashboard
-│   ├── appointments/ # Appointment scheduling
 │   └── settings/     # Application settings
 ├── components/       # Reusable React components
 ├── hooks/           # Custom React hooks
@@ -91,7 +93,6 @@ amplify/
 - **Consultations**: Track consultations with patients
 - **Invoicing**: Generate and manage invoices, including PDF generation
 - **Accounting**: Track payments and check deposits
-- **Appointments**: Schedule and manage appointments
 - **User Profiles**: Professional profile settings with signature upload
 - **Team Management**: Multi-user support with role-based permissions
 
