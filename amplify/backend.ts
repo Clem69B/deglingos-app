@@ -13,6 +13,9 @@ import { listUsers } from './functions/list-users/resource';
 import { manageUserGroups } from './functions/manage-user-groups/resource';
 import { createUser } from './functions/create-user/resource';
 import { PolicyStatement } from "aws-cdk-lib/aws-iam";
+import { BackupPlan, BackupPlanRule, BackupResource, BackupVault } from 'aws-cdk-lib/aws-backup';
+import { Duration } from 'aws-cdk-lib';
+import { Schedule } from 'aws-cdk-lib/aws-events';
 
 const currentEnvironment = process.env.AMPLIFY_ENVIRONMENT || 'sandbox';
 const isProduction = currentEnvironment === 'production' || currentEnvironment === 'prod';
@@ -54,9 +57,11 @@ backend.storage.resources.bucket.grantReadWrite(backend.generateInvoicePdf.resou
 // Grant email function access to Invoice and Patient tables and S3 storage
 backend.sendInvoiceEmail.addEnvironment('AMPLIFY_DATA_INVOICE_TABLE_NAME', backend.data.resources.tables['Invoice'].tableName);
 backend.sendInvoiceEmail.addEnvironment('AMPLIFY_DATA_PATIENT_TABLE_NAME', backend.data.resources.tables['Patient'].tableName);
+backend.sendInvoiceEmail.addEnvironment('AMPLIFY_DATA_USERPROFILE_TABLE_NAME', backend.data.resources.tables['UserProfile'].tableName);
 backend.sendInvoiceEmail.addEnvironment('AMPLIFY_STORAGE_BUCKET_NAME', backend.storage.resources.bucket.bucketName);
 backend.data.resources.tables['Invoice'].grantReadData(backend.sendInvoiceEmail.resources.lambda);
 backend.data.resources.tables['Patient'].grantReadData(backend.sendInvoiceEmail.resources.lambda);
+backend.data.resources.tables['UserProfile'].grantReadData(backend.sendInvoiceEmail.resources.lambda);
 backend.storage.resources.bucket.grantRead(backend.sendInvoiceEmail.resources.lambda);
 
 // Authorize email function to send emails via SES
@@ -126,18 +131,47 @@ backend.addOutput({
 });
 
 if (isProduction) {
-  console.log('🔒 Enable Point-in-time Recovery for all tables (Prod only)');
-  
-  // Enable Point-in-time Recovery for all tables
-  Object.values(backend.data.resources.tables).forEach(table => {
-    table.tableArn; // Ensure table is properly initialized
-    const cfnTable = table.node.defaultChild as any;
-    if (cfnTable) {
-      cfnTable.pointInTimeRecoverySpecification = {
-        pointInTimeRecoveryEnabled: true,
-      };
-    }
+  console.log('🔒 Enable backup for all tables (Prod only)');
+
+  const backupStack = backend.createStack("backup-stack");
+
+  const vault = new BackupVault(backupStack, "BackupVault", {
+    backupVaultName: `${currentEnvironment}-backup-vault`,
   });
+
+  const plan = new BackupPlan(backupStack, "BackupPlan", {
+    backupPlanName: `${currentEnvironment}-backup-plan`,
+    backupVault: vault,
+  });
+
+  // Weekly backup rule with 90 days retention
+  plan.addRule(
+    new BackupPlanRule({
+      deleteAfter: Duration.days(90),
+      ruleName: `${currentEnvironment}-backup-plan-rule`,
+      scheduleExpression: Schedule.cron({
+        minute: "0",
+        hour: "0",
+        weekDay: "1",
+        month: "*",
+        year: "*",
+      }),
+    })
+  );
+ 
+  // Add all DynamoDB tables to the backup plan
+  const myTables = Object.values(backend.data.resources.tables);
+  plan.addSelection("DynamoDBTables", {
+    resources: myTables.map((table) => BackupResource.fromDynamoDbTable(table)),
+    allowRestores: true,
+  });
+
+  // Enable Point-in-time Recovery for all DynamoDB tables
+  const { amplifyDynamoDbTables } = backend.data.resources.cfnResources;
+  for (const table of Object.values(amplifyDynamoDbTables)) {
+    table.pointInTimeRecoveryEnabled = true;
+  }
+
 } else {
   console.log(`⚠️  AWS Backup deactivated for : ${currentEnvironment}`);
 }

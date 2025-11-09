@@ -7,6 +7,7 @@ import Link from 'next/link';
 import ErrorAlert from '../../components/ErrorAlert';
 import PatientCombobox from '../../components/PatientCombobox';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
+import UserAvatar from '@/components/UserAvatar';
 
 const client = generateClient<Schema>();
 
@@ -247,21 +248,30 @@ export default function ConsultationsPage() {
                   className="block hover:bg-gray-50 px-4 py-4 sm:px-6"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm font-medium text-indigo-600 truncate">
-                          {consultation.patient?.firstName} {consultation.patient?.lastName}
-                        </div>
-                        <div className="ml-2 flex items-center text-sm text-gray-500">
-                          <svg className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          {formatDate(consultation.date)}
-                        </div>
+                    <div className="flex items-center flex-1">
+                      <div className="flex-shrink-0">
+                        <UserAvatar 
+                          firstName={consultation.patient?.firstName}
+                          lastName={consultation.patient?.lastName}
+                          size="sm"
+                        />
                       </div>
-                      <div className="mt-1">
-                        <div className="text-sm text-gray-900">
-                          <span className="font-medium">Motif:</span> {consultation.reason}
+                      <div className="ml-4 flex-1">
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm font-medium text-indigo-600 truncate">
+                            {consultation.patient?.firstName} {consultation.patient?.lastName}
+                          </div>
+                          <div className="ml-2 flex items-center text-sm text-gray-500">
+                            <svg className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            {formatDate(consultation.date)}
+                          </div>
+                        </div>
+                        <div className="mt-1">
+                          <div className="text-sm text-gray-900">
+                            <span className="font-medium">Motif:</span> {consultation.reason}
+                          </div>
                         </div>
                       </div>
                     </div>

@@ -30,6 +30,14 @@ export const handler: Schema["sendInvoiceEmail"]["functionHandler"] = async (eve
       };
     }
 
+    // Get user ID from identity (Cognito)
+    let userId: string | undefined;
+    if (event.identity && 'sub' in event.identity) {
+      userId = event.identity.sub;
+    } else if (event.identity && 'username' in event.identity) {
+      userId = event.identity.username;
+    }
+
     // Get invoice from DynamoDB
     const invoiceTableName = env.AMPLIFY_DATA_INVOICE_TABLE_NAME;
     if (!invoiceTableName) {
@@ -62,6 +70,22 @@ export const handler: Schema["sendInvoiceEmail"]["functionHandler"] = async (eve
     }));
 
     const patient = patientResponse.Item as Schema['Patient']['type'] | undefined;
+
+    // Get user profile
+    const userProfileTableName = env.AMPLIFY_DATA_USERPROFILE_TABLE_NAME;
+    let userProfile: Schema['UserProfile']['type'] | undefined;
+    
+    if (userId && userProfileTableName) {
+      try {
+        const userProfileResponse = await docClient.send(new GetCommand({
+          TableName: userProfileTableName,
+          Key: { userId }
+        }));
+        userProfile = userProfileResponse.Item as Schema['UserProfile']['type'] | undefined;
+      } catch (error) {
+        console.warn('Could not fetch user profile:', error);
+      }
+    }
 
     // Get PDF from S3
     const bucketName = env.AMPLIFY_STORAGE_BUCKET_NAME;
@@ -97,6 +121,17 @@ export const handler: Schema["sendInvoiceEmail"]["functionHandler"] = async (eve
     const senderEmail = env.SES_SENDER_EMAIL || 'noreply@deglingos.eu';
     const patientName = patient ? `${patient.firstName} ${patient.lastName}` : 'Cher patient';
     
+    // Get practitioner name from user profile
+    let practitionerName = 'L\'équipe Deglingos';
+    if (userProfile) {
+      const givenName = userProfile.givenName || '';
+      const familyName = userProfile.familyName || '';
+      const fullName = `${givenName} ${familyName}`.trim();
+      if (fullName) {
+        practitionerName = fullName;
+      }
+    }
+    
     const subject = `Facture ${invoice.invoiceNumber}`;
     const bodyText = `Bonjour ${patientName},
 
@@ -105,7 +140,7 @@ Veuillez trouver ci-joint votre facture ${invoice.invoiceNumber} en date du ${ne
 ${invoice.total || invoice.price ? `Montant: ${(invoice.total || invoice.price || 0).toFixed(2)} €` : ''}
 
 Cordialement,
-L'équipe Deglingos`;
+${practitionerName}`;
 
     const bodyHtml = `
       <html>
@@ -113,7 +148,7 @@ L'équipe Deglingos`;
           <p>Bonjour ${patientName},</p>
           <p>Veuillez trouver ci-joint votre facture ${invoice.invoiceNumber} en date du ${new Date(invoice.date).toLocaleDateString('fr-FR')}.</p>
           ${invoice.total || invoice.price ? `<p><strong>Montant: ${(invoice.total || invoice.price || 0).toFixed(2)} €</strong></p>` : ''}
-          <p>Cordialement,<br/>L'équipe Deglingos</p>
+          <p>Cordialement,<br/>${practitionerName}</p>
         </body>
       </html>
     `;
