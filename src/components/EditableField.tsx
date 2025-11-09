@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import AutoResizeTextarea from './AutoResizeTextarea';
+import React, { useState, useEffect, useRef } from 'react';
 
 // Icône de validation (coche verte)
 const CheckIcon = () => (
@@ -71,6 +70,41 @@ const EditableField: React.FC<EditableFieldProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [initialValue, setInitialValue] = useState(value);
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+
+  // Move cursor to end when entering edit mode
+  useEffect(() => {
+    if (isEditingField && inputRef.current) {
+      const element = inputRef.current;
+      // Focus the element first
+      element.focus();
+      
+      // setSelectionRange only works on text-based inputs (not date, datetime-local, etc.)
+      const textBasedInputTypes = ['text', 'email', 'tel', 'number'];
+      const isTextBased = element.tagName === 'TEXTAREA' || 
+                          (element.tagName === 'INPUT' && textBasedInputTypes.includes((element as HTMLInputElement).type));
+      
+      if (isTextBased) {
+        // Move cursor to the end for text-based inputs
+        const length = element.value.length;
+        try {
+          element.setSelectionRange(length, length);
+        } catch (e) {
+          // Silently ignore if setSelectionRange is not supported
+          console.debug('setSelectionRange not supported for this input type', e);
+        }
+      }
+      
+      // For textareas, also scroll to the end and auto-resize
+      if (element.tagName === 'TEXTAREA') {
+        const textarea = element as HTMLTextAreaElement;
+        textarea.scrollTop = textarea.scrollHeight;
+        // Auto-resize on mount
+        textarea.style.height = 'auto';
+        textarea.style.height = `${textarea.scrollHeight}px`;
+      }
+    }
+  }, [isEditingField]);
 
   useEffect(() => {
     setCurrentValue(value);
@@ -106,6 +140,13 @@ const EditableField: React.FC<EditableFieldProps> = ({
     }
     if (onDirtyStateChange) {
       onDirtyStateChange(fieldName, newValue !== initialValue);
+    }
+    
+    // Auto-resize textarea
+    if (e.target.tagName === 'TEXTAREA') {
+      const textarea = e.target as HTMLTextAreaElement;
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
     }
   };
 
@@ -162,66 +203,70 @@ const EditableField: React.FC<EditableFieldProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && inputType !== 'textarea') {
+    // Ctrl + Enter to save (works for all input types including textarea)
+    if (e.key === 'Enter' && e.ctrlKey) {
       e.preventDefault();
       saveChanges();
-    } else if (e.key === 'Escape') {
-      e.preventDefault(); // Empêcher d'autres comportements par défaut si Escape est pressé
+    }
+    // Enter to save (only for non-textarea inputs)
+    else if (e.key === 'Enter' && inputType !== 'textarea') {
+      e.preventDefault();
+      saveChanges();
+    }
+    // Escape to cancel
+    else if (e.key === 'Escape') {
+      e.preventDefault();
       handleCancel();
     }
   };
 
   const renderInputField = () => {
-    const inputElementProps: {
-      id: string;
-      name: string;
-      value: string | number; 
-      onChange: React.ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>;
-      onBlur: React.FocusEventHandler<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>;
-      onKeyDown: React.KeyboardEventHandler<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>; 
-      className: string;
-      placeholder?: string;
-      'aria-invalid': boolean | undefined;
-      'aria-describedby': string | undefined;
-      autoFocus: boolean;
-    } = {
+    const commonProps = {
       id: fieldName,
       name: fieldName,
-      // Formatage de la valeur pour datetime-local
-      value: (() => {
-        if (inputType === 'datetime-local' && typeof currentValue === 'string' && currentValue) {
-          try {
-            const dateObj = new Date(currentValue); // currentValue est une chaîne ISO (UTC)
-            // Formatte en YYYY-MM-DDTHH:MM pour l'affichage local dans l'input
-            const year = dateObj.getFullYear();
-            const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-            const day = dateObj.getDate().toString().padStart(2, '0');
-            const hours = dateObj.getHours().toString().padStart(2, '0');
-            const minutes = dateObj.getMinutes().toString().padStart(2, '0');
-            return `${year}-${month}-${day}T${hours}:${minutes}`;
-          } catch (e) {
-            console.error('Error formatting date for datetime-local input:', e);
-            return currentValue; // Fallback si le formatage échoue
-          }
-        }
-        return currentValue || '';
-      })(),
       onChange: handleValueChange,
       onBlur: handleBlur, 
-      onKeyDown: handleKeyDown, 
       className: `block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${fieldError ? 'border-red-500' : ''} ${inputClassName || ''} flex-grow`,
       placeholder: placeholder,
       'aria-invalid': !!fieldError,
       'aria-describedby': fieldError ? `${fieldName}-error` : undefined,
-      autoFocus: true, 
     };
+
+    // Format value for datetime-local
+    const formattedValue = (() => {
+      if (inputType === 'datetime-local' && typeof currentValue === 'string' && currentValue) {
+        try {
+          const dateObj = new Date(currentValue);
+          const year = dateObj.getFullYear();
+          const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+          const day = dateObj.getDate().toString().padStart(2, '0');
+          const hours = dateObj.getHours().toString().padStart(2, '0');
+          const minutes = dateObj.getMinutes().toString().padStart(2, '0');
+          return `${year}-${month}-${day}T${hours}:${minutes}`;
+        } catch (e) {
+          console.error('Error formatting date for datetime-local input:', e);
+          return currentValue;
+        }
+      }
+      return currentValue || '';
+    })();
 
     let fieldElement;
     if (inputType === 'textarea') {
-      fieldElement = <AutoResizeTextarea {...inputElementProps} rows={3} />;
+      fieldElement = (
+        <textarea
+          {...commonProps}
+          onKeyDown={handleKeyDown}
+          value={formattedValue}
+          rows={3}
+          ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+          className={`${commonProps.className} overflow-hidden`}
+          style={{ resize: 'none' }}
+        />
+      );
     } else if (inputType === 'select') {
       fieldElement = (
-        <select {...inputElementProps}>
+        <select {...commonProps} value={formattedValue}>
           {placeholder && <option value="">{placeholder}</option>}
           {options?.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -229,7 +274,15 @@ const EditableField: React.FC<EditableFieldProps> = ({
         </select>
       );
     } else {
-      fieldElement = <input type={inputType} {...inputElementProps} />; // Gère 'date', 'datetime-local', 'number', etc.
+      fieldElement = (
+        <input 
+          type={inputType} 
+          {...commonProps}
+          onKeyDown={handleKeyDown}
+          value={formattedValue}
+          ref={inputRef as React.RefObject<HTMLInputElement>}
+        />
+      );
     }
 
     return (
@@ -268,10 +321,9 @@ const EditableField: React.FC<EditableFieldProps> = ({
       ) : (
         <div
           onClick={() => !disabled && setIsEditingField(true)}
-          className={`group mt-1 text-sm text-gray-900 ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-50'} p-2 border border-transparent ${disabled ? '' : 'hover:border-gray-300'} rounded-md min-h-[38px] flex items-center justify-between ${displayClassName || ''}`}
+          className={`group mt-1 text-sm text-gray-900 ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-50'} p-2 border border-transparent ${disabled ? '' : 'hover:border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500'} rounded-md min-h-[38px] flex items-center justify-between ${displayClassName || ''}`}
           role="button"
           tabIndex={disabled ? -1 : 0}
-          onFocus={() => !disabled && setIsEditingField(true)}
           onKeyDown={(e) => { if (!disabled && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setIsEditingField(true);}}}
         >
           <span className="whitespace-pre-wrap break-words flex-grow">

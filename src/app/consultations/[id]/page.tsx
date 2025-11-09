@@ -188,9 +188,6 @@ export default function ConsultationDetailPage() {
         setConsultation(oldConsultationData);
         throw new Error(`Erreur lors de la mise à jour du champ '${fieldName}'.`);
       }
-      
-      // Re-fetch data to get the correct shape with relations
-      await fetchConsultation(entityId);
 
     } catch (err) {
       console.error(`Error in updateConsultationField for ${fieldName}:`, err);
