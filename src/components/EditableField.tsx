@@ -91,7 +91,7 @@ const EditableField: React.FC<EditableFieldProps> = ({
           element.setSelectionRange(length, length);
         } catch (e) {
           // Silently ignore if setSelectionRange is not supported
-          console.debug('setSelectionRange not supported for this input type');
+          console.debug('setSelectionRange not supported for this input type', e);
         }
       }
       
