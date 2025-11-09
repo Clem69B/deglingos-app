@@ -13,6 +13,8 @@ import ErrorAlert from '../../../components/ErrorAlert';
 import EditableField from '../../../components/EditableField';
 import { UserName } from '../../../components/users';
 import { translateStatus } from '@/lib/invoiceStatus';
+import usePatientManagement from '@/hooks/usePatientManagement';
+import UserAvatar from '@/components/UserAvatar';
 
 const client = generateClient<Schema>();
 const CONSULTATION_DETAIL_PAGE_DIRTY_SOURCE = 'consultationDetailPage';
@@ -36,6 +38,9 @@ export default function ConsultationDetailPage() {
   const [consultation, setConsultation] = useState<ConsultationWithPatient | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false); // État pour la suppression
+
+  // Use patient management hook for patient field updates
+  const { updateField: updatePatientField } = usePatientManagement({ onError: setError });
 
   // Dirty state management
   const { isPageDirty, addDirtySource, removeDirtySource } = useDirtyForm();
@@ -91,7 +96,7 @@ export default function ConsultationDetailPage() {
             'anamnesis.sleep', 'anamnesis.psychological',
             'patient.id', 'patient.firstName', 'patient.lastName', 
             'patient.email', 'patient.phone', 'patient.dateOfBirth',
-            'patient.medicalHistory', 'patient.surgicalHistory', 'patient.activities',
+            'patient.medicalHistory', 'patient.surgicalHistory', 'patient.currentMedications', 'patient.activities',
             'invoice.id', 'invoice.status', 'invoice.paymentMethod'
           ]
         }
@@ -235,6 +240,35 @@ export default function ConsultationDetailPage() {
       }
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  // Wrapper for updatePatientField that updates consultation state locally
+  const handleUpdatePatientField = async (entityId: string, fieldName: string, newValue: string | number | boolean | null | undefined): Promise<void> => {
+    if (!consultation || !consultation.patient) return;
+    
+    // Optimistic update of local consultation state
+    const oldConsultation = { ...consultation };
+    setConsultation(prev => prev ? {
+      ...prev,
+      patient: prev.patient ? { ...prev.patient, [fieldName]: newValue } : prev.patient
+    } : null);
+    
+    try {
+      const updatedPatient = await updatePatientField(entityId, fieldName, newValue);
+      
+      // Update consultation with the actual patient data from server
+      if (updatedPatient) {
+        setConsultation(prev => prev ? {
+          ...prev,
+          patient: updatedPatient
+        } : null);
+      }
+    } catch (err) {
+      // Revert on error
+      setConsultation(oldConsultation);
+      console.error(`Error updating patient field ${fieldName}:`, err);
+      throw err;
     }
   };
 
@@ -517,11 +551,11 @@ export default function ConsultationDetailPage() {
               </h3>
               <div className="flex items-center mb-4">
                 <div className="flex-shrink-0">
-                  <div className="h-12 w-12 rounded-full bg-indigo-500 flex items-center justify-center">
-                    <span className="text-lg font-medium text-white">
-                      {consultation.patient?.firstName?.[0]}{consultation.patient?.lastName?.[0]}
-                    </span>
-                  </div>
+                  <UserAvatar 
+                    firstName={consultation.patient?.firstName}
+                    lastName={consultation.patient?.lastName}
+                    size="md"
+                  />
                 </div>
                 <div className="ml-4">
                   <div className="text-lg font-medium text-gray-900">
@@ -547,18 +581,42 @@ export default function ConsultationDetailPage() {
                     <span className="ml-2 text-gray-900">{consultation.patient.phone}</span>
                   </div>
                 )}
-                {consultation.patient?.medicalHistory && (
-                  <div className="text-sm">
-                    <span className="font-medium text-gray-500">Antécédents médicaux:</span>
-                    <p className="ml-2 text-gray-900 whitespace-pre-wrap">{consultation.patient.medicalHistory}</p>
-                  </div>
-                )}
-                {consultation.patient?.surgicalHistory && (
-                  <div className="text-sm">
-                    <span className="font-medium text-gray-500">Antécédents chirurgicaux:</span>
-                    <p className="ml-2 text-gray-900 whitespace-pre-wrap">{consultation.patient.surgicalHistory}</p>
-                  </div>
-                )}
+                <div>
+                  <EditableField
+                    label="Antécédents médicaux"
+                    value={consultation.patient?.medicalHistory}
+                    fieldName="medicalHistory"
+                    entityId={consultation.patient?.id || ''}
+                    updateFunction={handleUpdatePatientField}
+                    inputType="textarea"
+                    placeholder="Maladies, pathologies antérieures, etc."
+                    onDirtyStateChange={handleDirtyStateChange}
+                  />
+                </div>
+                <div>
+                  <EditableField
+                    label="Antécédents chirurgicaux"
+                    value={consultation.patient?.surgicalHistory}
+                    fieldName="surgicalHistory"
+                    entityId={consultation.patient?.id || ''}
+                    updateFunction={handleUpdatePatientField}
+                    inputType="textarea"
+                    placeholder="Opérations, interventions chirurgicales, etc."
+                    onDirtyStateChange={handleDirtyStateChange}
+                  />
+                </div>
+                <div>
+                  <EditableField
+                    label="Traitement en cours"
+                    value={consultation.patient?.currentMedications}
+                    fieldName="currentMedications"
+                    entityId={consultation.patient?.id || ''}
+                    updateFunction={handleUpdatePatientField}
+                    inputType="textarea"
+                    placeholder="Traitement actuel suivi par le patient"
+                    onDirtyStateChange={handleDirtyStateChange}
+                  />
+                </div>
                 {consultation.patient?.activities && (
                   <div className="text-sm">
                     <span className="font-medium text-gray-500">Activité:</span>

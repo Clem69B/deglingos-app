@@ -65,5 +65,6 @@ export interface PatientSummary {
   dateOfBirth?: string | null;
   medicalHistory?: string | null;
   surgicalHistory?: string | null;
+  currentMedications?: string | null;
   activities?: string | null;
 }

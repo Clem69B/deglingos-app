@@ -6,7 +6,7 @@ import type { Schema } from '../../../../amplify/data/resource';
 import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
 import { uploadData, list, getUrl, remove } from 'aws-amplify/storage'; // Added storage imports
-import type { PatientDetail, ConsultationSummary, InvoiceSummary } from '../../../types';
+import type { ConsultationSummary, InvoiceSummary } from '../../../types';
 import EditableField from '../../../components/EditableField';
 import ProtectedLink from '../../../components/ProtectedLink';
 import Link from 'next/link'; // Ajout de l'importation
@@ -14,6 +14,8 @@ import { useDirtyForm } from '../../../contexts/DirtyFormContext';
 import ErrorAlert from '../../../components/ErrorAlert';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
 import UnpaidInvoices from '@/components/invoices/UnpaidInvoices';
+import usePatientManagement from '@/hooks/usePatientManagement';
+import UserAvatar from '@/components/UserAvatar';
 
 const client = generateClient<Schema>();
 const PATIENT_DETAIL_PAGE_DIRTY_SOURCE = 'patientDetailPage';
@@ -31,7 +33,14 @@ export default function PatientDetailPage() {
   const patientId = params.id as string;
 
   const { error, errorType, setError, clearError, handleAmplifyResponse } = useErrorHandler();
-  const [patient, setPatient] = useState<PatientDetail | null>(null);
+  
+  // Use patient management hook
+  const { 
+    patient, 
+    getPatientById,
+    updateField: updatePatientField 
+  } = usePatientManagement({ onError: setError });
+  
   const [consultations, setConsultations] = useState<ConsultationSummary[]>([]);
   const [unpaidInvoices, setUnpaidInvoices] = useState<InvoiceSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,14 +99,8 @@ export default function PatientDetailPage() {
         setLoading(true);
         clearError();
 
-        const patientResponse = await client.models.Patient.get({ id: patientId });
-        const patientData = handleAmplifyResponse(patientResponse);
-        if (!patientData) {
-          setError("Patient non trouvé ou erreur lors de la récupération.", "error");
-          // Optionnel: router.push('/patients'); si l'erreur est critique
-          return;
-        }
-        setPatient(patientData as PatientDetail);
+        // Use the hook to fetch patient
+        await getPatientById(patientId);
 
         // Load consultations
         const consultationsResponse = await client.models.Consultation.list({
@@ -152,58 +155,11 @@ export default function PatientDetailPage() {
       loadPatientData();
       fetchPatientAttachments();
     }
-  }, [patientId, router, clearError, handleAmplifyResponse, setError]); // Added fetchPatientAttachments to dependencies if it were stable, but it's called inside
+  }, [patientId, router, clearError, handleAmplifyResponse, setError, getPatientById]); // Added getPatientById dependency
 
-  // handleInputChange, validateForm, handleSave, handleCancel sont supprimés
-
-  const updatePatientField = async (entityId: string, fieldName: string, newValue: string | number | boolean | null | undefined) => {
-    if (!patient) return;
-    clearError();
-
-    const oldPatientData = { ...patient };
-    setPatient(prev => prev ? { ...prev, [fieldName]: newValue } : null);
-
-    try {
-      const updateData: { id: string;[key: string]: string | number | boolean | null | undefined } = {
-        id: entityId,
-      };
-
-      let processedValue = newValue;
-      if (typeof newValue === 'string') {
-        processedValue = newValue.trim();
-      }
-      // Pour les champs optionnels, si la valeur après trim est vide, la mettre à null
-      if (processedValue === '' && ['email', 'phone', 'dateOfBirth', 'address', 'city', 'postalCode', 'gender', 'profession', 'referringPhysician', 'medicalHistory', 'surgicalHistory', 'currentMedications', 'activities'].includes(fieldName)) {
-        processedValue = null;
-      }
-
-      updateData[fieldName] = processedValue;
-
-      const response = await client.models.Patient.update(updateData);
-      const updatedPatient = handleAmplifyResponse(response);
-
-      if (!updatedPatient) {
-        // handleAmplifyResponse aura déjà appelé setError en cas d'erreur Amplify
-        // Si ce n'est pas une erreur Amplify mais que les données sont nulles, définissez une erreur générique.
-        if (!error) { 
-             setError(`Erreur lors de la mise à jour du champ '${fieldName}'. Réponse invalide.`, 'error');
-        }
-        setPatient(oldPatientData); 
-        throw new Error(`Erreur lors de la mise à jour du champ '${fieldName}'.`); 
-      }
-      setPatient(updatedPatient as PatientDetail);
-      // Après une sauvegarde réussie, le champ n'est plus dirty. EditableField s'en chargera via son useEffect.
-    } catch (err) {
-      console.error(`Error in updatePatientField for ${fieldName}:`, err);
-      setPatient(oldPatientData);
-      // setError est déjà appelé par handleAmplifyResponse ou dans le bloc try.
-      // Si ce n'est pas le cas, ou si c'est une autre erreur :
-      if (!(err instanceof Error && (err.message.includes("Amplify") || error))) { 
-          const errorMessage = err instanceof Error ? err.message : `Une erreur est survenue lors de la mise à jour du champ '${fieldName}'.`;
-          setError(errorMessage, 'error');
-      }
-      throw err; 
-    }
+  // Wrapper for updatePatientField to match EditableField's expected signature
+  const handleUpdatePatientField = async (entityId: string, fieldName: string, newValue: string | number | boolean | null | undefined): Promise<void> => {
+    await updatePatientField(entityId, fieldName, newValue);
   };
 
   const handleDeletePatient = async () => {
@@ -408,10 +364,6 @@ export default function PatientDetailPage() {
     return age;
   };
 
-  const getPatientInitials = (firstName: string | null | undefined, lastName: string | null | undefined) => {
-    return `${(firstName || '').charAt(0)}${(lastName || '').charAt(0)}`.toUpperCase();
-  };
-
   const formatFileSize = (bytes?: number) => {
     if (bytes === undefined || bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -452,9 +404,11 @@ export default function PatientDetailPage() {
       {/* Header */}
       <div className="md:flex md:items-center md:justify-between">
         <div className="flex-1 min-w-0 flex items-center space-x-4">
-          <div className="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center text-white text-xl font-medium">
-            {getPatientInitials(patient.firstName, patient.lastName)}
-          </div>
+          <UserAvatar 
+            firstName={patient.firstName}
+            lastName={patient.lastName}
+            size="lg"
+          />
           <div>
             <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
               {patient.firstName} {patient.lastName}
@@ -539,7 +493,7 @@ export default function PatientDetailPage() {
                 fieldName="firstName"
                 value={patient.firstName}
                 entityId={patientId}
-                updateFunction={updatePatientField}
+                updateFunction={handleUpdatePatientField}
                 required
                 validationRules={(val) => (!val || String(val).trim() === '' ? 'Le prénom est obligatoire' : null)}
                 onDirtyStateChange={handleDirtyStateChange}
@@ -549,7 +503,7 @@ export default function PatientDetailPage() {
                 fieldName="lastName"
                 value={patient.lastName}
                 entityId={patientId}
-                updateFunction={updatePatientField}
+                updateFunction={handleUpdatePatientField}
                 required
                 validationRules={(val) => (!val || String(val).trim() === '' ? 'Le nom est obligatoire' : null)}
                 onDirtyStateChange={handleDirtyStateChange}
@@ -559,7 +513,7 @@ export default function PatientDetailPage() {
                 fieldName="email"
                 value={patient.email}
                 entityId={patientId}
-                updateFunction={updatePatientField}
+                updateFunction={handleUpdatePatientField}
                 inputType="email"
                 placeholder="exemple@domaine.com"
                 validationRules={(val) => (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(val)) ? 'Email invalide' : null)}
@@ -570,7 +524,7 @@ export default function PatientDetailPage() {
                 fieldName="phone"
                 value={patient.phone}
                 entityId={patientId}
-                updateFunction={updatePatientField}
+                updateFunction={handleUpdatePatientField}
                 inputType="tel"
                 placeholder="0612345678"
                 validationRules={(val) => (val && !/^[\d\s\-\+\(\)]+$/.test(String(val)) ? 'Téléphone invalide' : null)}
@@ -581,7 +535,7 @@ export default function PatientDetailPage() {
                 fieldName="dateOfBirth"
                 value={patient.dateOfBirth}
                 entityId={patientId}
-                updateFunction={updatePatientField}
+                updateFunction={handleUpdatePatientField}
                 inputType="date"
                 validationRules={(val) => (val && new Date(String(val)) > new Date() ? 'Date future invalide' : null)}
                 onDirtyStateChange={handleDirtyStateChange}
@@ -591,7 +545,7 @@ export default function PatientDetailPage() {
                 fieldName="gender"
                 value={patient.gender}
                 entityId={patientId}
-                updateFunction={updatePatientField}
+                updateFunction={handleUpdatePatientField}
                 inputType="select"
                 placeholder="Sélectionner..."
                 options={[
@@ -607,7 +561,7 @@ export default function PatientDetailPage() {
                 fieldName="profession"
                 value={patient.profession}
                 entityId={patientId}
-                updateFunction={updatePatientField}
+                updateFunction={handleUpdatePatientField}
                 placeholder="Profession du patient"
                 onDirtyStateChange={handleDirtyStateChange}
               />
@@ -623,7 +577,7 @@ export default function PatientDetailPage() {
                 fieldName="address"
                 value={patient.address}
                 entityId={patientId}
-                updateFunction={updatePatientField}
+                updateFunction={handleUpdatePatientField}
                 inputType="textarea"
                 placeholder="1 rue de la Paix"
                 onDirtyStateChange={handleDirtyStateChange}
@@ -634,7 +588,7 @@ export default function PatientDetailPage() {
                   fieldName="city"
                   value={patient.city}
                   entityId={patientId}
-                  updateFunction={updatePatientField}
+                  updateFunction={handleUpdatePatientField}
                   placeholder="Paris"
                   onDirtyStateChange={handleDirtyStateChange}
                 />
@@ -643,7 +597,7 @@ export default function PatientDetailPage() {
                   fieldName="postalCode"
                   value={patient.postalCode}
                   entityId={patientId}
-                  updateFunction={updatePatientField}
+                  updateFunction={handleUpdatePatientField}
                   placeholder="75001"
                   onDirtyStateChange={handleDirtyStateChange}
                 />
@@ -660,7 +614,7 @@ export default function PatientDetailPage() {
                 fieldName="referringPhysician"
                 value={patient.referringPhysician}
                 entityId={patientId}
-                updateFunction={updatePatientField}
+                updateFunction={handleUpdatePatientField}
                 placeholder="Dr. Nom Prénom"
                 onDirtyStateChange={handleDirtyStateChange}
               />
@@ -669,7 +623,7 @@ export default function PatientDetailPage() {
                 fieldName="medicalHistory"
                 value={patient.medicalHistory}
                 entityId={patientId}
-                updateFunction={updatePatientField}
+                updateFunction={handleUpdatePatientField}
                 inputType="textarea"
                 placeholder="Maladies, allergies, etc."
                 onDirtyStateChange={handleDirtyStateChange}
@@ -679,17 +633,17 @@ export default function PatientDetailPage() {
                 fieldName="surgicalHistory"
                 value={patient.surgicalHistory}
                 entityId={patientId}
-                updateFunction={updatePatientField}
+                updateFunction={handleUpdatePatientField}
                 inputType="textarea"
                 placeholder="Opérations, interventions, etc."
                 onDirtyStateChange={handleDirtyStateChange}
               />
               <EditableField
-                label="Médicaments en cours"
+                label="Traitement en cours"
                 fieldName="currentMedications"
                 value={patient.currentMedications}
                 entityId={patientId}
-                updateFunction={updatePatientField}
+                updateFunction={handleUpdatePatientField}
                 inputType="textarea"
                 placeholder="Nom du médicament, dosage, fréquence"
                 onDirtyStateChange={handleDirtyStateChange}
@@ -699,7 +653,7 @@ export default function PatientDetailPage() {
                 fieldName="activities"
                 value={patient.activities}
                 entityId={patientId}
-                updateFunction={updatePatientField}
+                updateFunction={handleUpdatePatientField}
                 inputType="textarea"
                 placeholder="Sport, travail, habitudes..."
                 onDirtyStateChange={handleDirtyStateChange}

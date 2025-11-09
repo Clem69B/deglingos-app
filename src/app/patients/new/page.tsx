@@ -1,21 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '../../../../amplify/data/resource';
 import type { CreatePatientInput, PatientFormData } from '../../../types/patient';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AutoResizeTextarea from '../../../components/AutoResizeTextarea';
 import ErrorAlert from '../../../components/ErrorAlert';
 import { useErrorHandler } from '../../../hooks/useErrorHandler';
-
-const client = generateClient<Schema>();
+import usePatientManagement from '../../../hooks/usePatientManagement';
 
 export default function NewPatientPage() {
   const router = useRouter();
-  const { error, errorType, setError, clearError, handleAmplifyResponse } = useErrorHandler();
-  const [loading, setLoading] = useState(false);
+  const { error, errorType, setError, clearError } = useErrorHandler();
+  
+  // Use patient management hook
+  const { createPatient, loading: patientLoading } = usePatientManagement({ onError: setError });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState<PatientFormData>({
     firstName: '',
@@ -80,7 +79,6 @@ export default function NewPatientPage() {
       return;
     }
 
-    setLoading(true);
     try {
       const patientData: CreatePatientInput = {
         firstName: formData.firstName.trim(),
@@ -102,22 +100,14 @@ export default function NewPatientPage() {
       if (formData.currentMedications.trim()) patientData.currentMedications = formData.currentMedications.trim();
       if (formData.activities.trim()) patientData.activities = formData.activities.trim();
 
-      const response = await client.models.Patient.create(patientData);
-      const createdPatient = handleAmplifyResponse(response);
+      const createdPatient = await createPatient(patientData);
       
       if (createdPatient) {
         router.push('/patients');
-      } else {
-        // setError sera appelé par handleAmplifyResponse en cas d'erreur Amplify
-        // Si ce n'est pas une erreur Amplify mais que les données sont nulles, définissez une erreur générique.
-        if (!error) { 
-            setError('Une erreur est survenue lors de la création du patient. Réponse invalide.', 'error');
-        }
       }
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Une erreur est survenue lors de la création du patient.'));
-    } finally {
-      setLoading(false);
+      console.error('Error creating patient:', err);
+      // Error already handled by the hook
     }
   };
 
@@ -433,7 +423,7 @@ export default function NewPatientPage() {
 
                     <div className="col-span-6">
                       <label htmlFor="currentMedications" className="block text-sm font-medium text-gray-700">
-                        Médicaments en cours
+                        Traitement en cours
                       </label>
                       <AutoResizeTextarea
                         id="currentMedications"
@@ -470,10 +460,10 @@ export default function NewPatientPage() {
           <div className="bg-gray-50 px-4 py-3 text-right sm:px-6">
             <button
               type="submit"
-              disabled={loading}
+              disabled={patientLoading}
               className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? (
+              {patientLoading ? (
                 <>
                   <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
