@@ -1,36 +1,110 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Deglingos App
 
-## Getting Started
+A medical practice management application for handling patients, consultations, invoices, and appointments.
 
-First, run the development server:
+## Overview
+
+This is a personal project built to manage the daily operations of a medical practice. It provides tools for patient management, consultation tracking, invoice generation, and appointment scheduling.
+
+## Tech Stack
+
+- **Frontend**: Next.js 15.3 with React 19 and TypeScript
+- **Backend**: AWS Amplify (Infrastructure as Code)
+- **Authentication**: AWS Cognito
+- **API**: AWS AppSync (GraphQL)
+- **Database**: DynamoDB
+- **Storage**: AWS S3
+- **Styling**: Tailwind CSS 4
+- **Internationalization**: i18next
+
+## Prerequisites
+
+- Node.js 20 or later
+- npm or yarn
+- AWS account with Amplify CLI configured
+
+## Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/Clem69B/deglingos-app.git
+cd deglingos-app
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Configure AWS Amplify:
+```bash
+npx ampx sandbox
+```
+
+This will set up a local development environment with AWS resources.
+
+## Development
+
+Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The application will be available at [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Available Commands
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `npm run dev` - Start development server with Turbopack
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
+- `npm run amplify:sandbox` - Start Amplify sandbox environment
+- `npm run amplify:deploy` - Deploy to AWS
 
-## Learn More
+## Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+├── app/              # Next.js App Router pages
+│   ├── patients/     # Patient management
+│   ├── consultations/# Consultation tracking
+│   ├── invoices/     # Invoice generation
+│   ├── accounting/   # Accounting dashboard
+│   ├── appointments/ # Appointment scheduling
+│   └── settings/     # Application settings
+├── components/       # Reusable React components
+├── hooks/           # Custom React hooks
+├── types/           # TypeScript type definitions
+└── lib/             # Configuration and utilities
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+amplify/
+├── data/            # GraphQL schema
+├── auth/            # Cognito configuration
+├── functions/       # Lambda functions
+└── storage/         # S3 configuration
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Features
 
-## Deploy on Vercel
+- **Patient Management**: Create and manage patient records
+- **Consultations**: Track consultations with patients
+- **Invoicing**: Generate and manage invoices, including PDF generation
+- **Accounting**: Track payments and check deposits
+- **Appointments**: Schedule and manage appointments
+- **User Profiles**: Professional profile settings with signature upload
+- **Team Management**: Multi-user support with role-based permissions
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deployment
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Deploy to AWS:
+
+```bash
+npm run amplify:deploy
+```
+
+This deploys the backend infrastructure and Next.js application to AWS Amplify.
+
+## License
+
+Private project - All rights reserved.
