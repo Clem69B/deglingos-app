@@ -54,7 +54,6 @@ const schema = a.schema({
       medicalHistory: a.string(),
       surgicalHistory: a.string(),
       currentMedications: a.string(),
-      currentTreatment: a.string(),
       activities: a.string(),
       consultations: a.hasMany('Consultation', 'patientId'),
       Appointment: a.hasMany('Appointment', 'patientId'),

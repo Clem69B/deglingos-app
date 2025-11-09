@@ -6,7 +6,7 @@ import type { Schema } from '../../../../amplify/data/resource';
 import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
 import { uploadData, list, getUrl, remove } from 'aws-amplify/storage'; // Added storage imports
-import type { PatientDetail, ConsultationSummary, InvoiceSummary } from '../../../types';
+import type { ConsultationSummary, InvoiceSummary } from '../../../types';
 import EditableField from '../../../components/EditableField';
 import ProtectedLink from '../../../components/ProtectedLink';
 import Link from 'next/link'; // Ajout de l'importation
@@ -37,7 +37,6 @@ export default function PatientDetailPage() {
   // Use patient management hook
   const { 
     patient, 
-    loading: patientLoading, 
     getPatientById,
     updateField: updatePatientField 
   } = usePatientManagement({ onError: setError });

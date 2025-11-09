@@ -1,16 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { SelectionSet } from 'aws-amplify/data';
-import type { Schema } from '../../../amplify/data/resource';
 import Link from 'next/link';
 import ErrorAlert from '../../components/ErrorAlert';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
 import usePatientManagement from '../../hooks/usePatientManagement';
 import UserAvatar from '@/components/UserAvatar';
-
-const selectionSet = ['id', 'firstName', 'lastName', 'email', 'phone', 'updatedAt'] as const;
-type PatientListItem = SelectionSet<Schema['Patient']['type'], typeof selectionSet>;
 
 export default function Page() {
   const { error, errorType, setError, clearError } = useErrorHandler();
