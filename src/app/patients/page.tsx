@@ -1,51 +1,34 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { generateClient, SelectionSet } from 'aws-amplify/data';
+import { SelectionSet } from 'aws-amplify/data';
 import type { Schema } from '../../../amplify/data/resource';
 import Link from 'next/link';
 import ErrorAlert from '../../components/ErrorAlert';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
-
-const client = generateClient<Schema>();
+import usePatientManagement from '../../hooks/usePatientManagement';
+import UserAvatar from '@/components/UserAvatar';
 
 const selectionSet = ['id', 'firstName', 'lastName', 'email', 'phone', 'updatedAt'] as const;
 type PatientListItem = SelectionSet<Schema['Patient']['type'], typeof selectionSet>;
 
 export default function Page() {
-  const { error, errorType, setError, clearError, handleAmplifyResponse } = useErrorHandler();
-  const [isLoading, setIsLoading] = useState(true);
-  const [patients, setPatients] = useState<PatientListItem[]>([]);
+  const { error, errorType, setError, clearError } = useErrorHandler();
+  
+  // Use patient management hook
+  const { patients, loading, listPatients } = usePatientManagement({ onError: setError });
+  
   const [searchLastName, setSearchLastName] = useState('');
 
   const fetchPatients = async () => {
-    try {
-      const normalizedSearch = searchLastName.trim().charAt(0).toUpperCase() + searchLastName.trim().slice(1).toLowerCase();
-      const response = await client.models.Patient.list({
-        filter: {
-          or: [
-            { lastName: { contains: searchLastName } },
-            { lastName: { contains: normalizedSearch } },
-          ],
-        },
-        selectionSet: selectionSet,
-        limit: 20,
-      });
-      
-      const data = handleAmplifyResponse(response);
-      if (data) {
-        setPatients(data);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Erreur lors du chargement des patients'));
-    } finally {
-      setIsLoading(false);
-    }
+    const normalizedSearch = searchLastName.trim();
+    await listPatients(normalizedSearch ? { lastName: normalizedSearch, limit: 20 } : { limit: 20 });
   }
 
   // Chargement initial des patients au montage du composant
   useEffect(() => {
     fetchPatients();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -90,9 +73,7 @@ export default function Page() {
               className="p-4 flex gap-2 items-center"
               onSubmit={async (e) => {
                 e.preventDefault();
-                setIsLoading(true);
                 await fetchPatients();
-                setIsLoading(false);
               }}
             >
               <input
@@ -105,7 +86,7 @@ export default function Page() {
               <button
                 type="submit"
                 className="bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700 active:bg-indigo-800 "
-                disabled={isLoading}
+                disabled={loading}
               >
                 Rechercher
               </button>
@@ -116,7 +97,18 @@ export default function Page() {
 
       {/* Patient List */}
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul className="divide-y divide-gray-200">
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+          </div>
+        ) : patients.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-sm text-gray-500">
+              {searchLastName ? 'Aucun patient trouvé pour cette recherche.' : 'Aucun patient enregistré.'}
+            </p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-gray-200">
           {patients.map((patient) => (
             <li key={patient.id}>
               <Link
@@ -126,11 +118,11 @@ export default function Page() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <div className="h-10 w-10 rounded-full bg-indigo-500 flex items-center justify-center">
-                        <span className="text-sm font-medium text-white">
-                          {patient.firstName?.[0]}{patient.lastName?.[0]}
-                        </span>
-                      </div>
+                      <UserAvatar 
+                        firstName={patient.firstName}
+                        lastName={patient.lastName}
+                        size="sm"
+                      />
                     </div>
                     <div className="ml-4">
                       <div className="text-sm font-medium text-gray-900">
@@ -157,11 +149,12 @@ export default function Page() {
               </Link>
             </li>
           ))}
-        </ul>
+          </ul>
+        )}
       </div>
 
       {/* Statistiques */}
-      {!isLoading && (
+      {!loading && (
         <div className="bg-white shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
             <div className="text-sm text-gray-500">

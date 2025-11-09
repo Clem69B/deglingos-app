@@ -12,7 +12,6 @@ export interface PatientBaseData extends PersonBaseData {
   medicalHistory?: string | null;
   surgicalHistory?: string | null;
   currentMedications?: string | null;
-  currentTreatment?: string | null;
   activities?: string | null;
 }
 
@@ -53,7 +52,6 @@ export interface PatientFormData {
   medicalHistory: string;
   surgicalHistory: string;
   currentMedications: string;
-  currentTreatment: string;
   activities: string;
 }
 
@@ -67,6 +65,6 @@ export interface PatientSummary {
   dateOfBirth?: string | null;
   medicalHistory?: string | null;
   surgicalHistory?: string | null;
-  currentTreatment?: string | null;
+  currentMedications?: string | null;
   activities?: string | null;
 }
