@@ -57,9 +57,11 @@ backend.storage.resources.bucket.grantReadWrite(backend.generateInvoicePdf.resou
 // Grant email function access to Invoice and Patient tables and S3 storage
 backend.sendInvoiceEmail.addEnvironment('AMPLIFY_DATA_INVOICE_TABLE_NAME', backend.data.resources.tables['Invoice'].tableName);
 backend.sendInvoiceEmail.addEnvironment('AMPLIFY_DATA_PATIENT_TABLE_NAME', backend.data.resources.tables['Patient'].tableName);
+backend.sendInvoiceEmail.addEnvironment('AMPLIFY_DATA_USERPROFILE_TABLE_NAME', backend.data.resources.tables['UserProfile'].tableName);
 backend.sendInvoiceEmail.addEnvironment('AMPLIFY_STORAGE_BUCKET_NAME', backend.storage.resources.bucket.bucketName);
 backend.data.resources.tables['Invoice'].grantReadData(backend.sendInvoiceEmail.resources.lambda);
 backend.data.resources.tables['Patient'].grantReadData(backend.sendInvoiceEmail.resources.lambda);
+backend.data.resources.tables['UserProfile'].grantReadData(backend.sendInvoiceEmail.resources.lambda);
 backend.storage.resources.bucket.grantRead(backend.sendInvoiceEmail.resources.lambda);
 
 // Authorize email function to send emails via SES
