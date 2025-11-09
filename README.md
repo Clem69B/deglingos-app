@@ -7,7 +7,7 @@ A medical practice management application for osteopaths to handle patients, con
 This is a personal project built to manage the daily operations of an osteopathy practice. It provides tools for patient management, consultation tracking, and invoice generation.
 
 > **⚠️ Data Responsibility Disclaimer**  
-> Although the AWS solutions used in this application are HDS-approved (Hébergeur de Données de Santé), you are solely responsible for the data you process and store. Ensure compliance with applicable healthcare data protection regulations (GDPR, etc.).
+> Although the AWS solutions used in this application are HDS-approved (Hébergement de Données de Santé), you are solely responsible for the data you process and store. Ensure compliance with applicable healthcare data protection regulations (GDPR, etc.).
 
 ## Tech Stack
 
