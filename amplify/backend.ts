@@ -18,7 +18,7 @@ import { Duration } from 'aws-cdk-lib';
 import { Schedule } from 'aws-cdk-lib/aws-events';
 
 const currentEnvironment = process.env.AMPLIFY_ENVIRONMENT || 'sandbox';
-const isProduction = currentEnvironment === 'production' || currentEnvironment === 'prod';
+const isProduction = currentEnvironment === 'production' || currentEnvironment === 'prod' || currentEnvironment === 'staging';
 
 export const backend = defineBackend({
   auth,
@@ -35,6 +35,18 @@ export const backend = defineBackend({
   downloadInvoicePdf,
   populateUserProfiles,
 });
+
+// =================== MFA Configuration ===================
+
+// Enforce MFA in production and staging environments
+if (isProduction) {
+  console.log('🔐 Enforcing MFA for production/staging environment');
+  const { cfnUserPool } = backend.auth.resources.cfnResources;
+  cfnUserPool.mfaConfiguration = 'REQUIRED';
+  cfnUserPool.enabledMfas = ['SOFTWARE_TOKEN_MFA'];
+} else {
+  console.log(`⚠️  MFA is optional for environment: ${currentEnvironment}`);
+}
 
 // =================== Permissions Configuration ===================
 

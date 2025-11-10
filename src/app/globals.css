@@ -209,3 +209,56 @@ body {
 .clickable-item-neutral {
   @apply border border-gray-200 bg-gray-50 hover:bg-gray-100;
 }
+
+/* ==========================================================================
+   Alert & Message components
+   ========================================================================== */
+
+.alert-success {
+  @apply rounded-md bg-green-50 p-4;
+}
+
+.alert-error {
+  @apply rounded-md bg-red-50 p-4;
+}
+
+.alert-info {
+  @apply rounded-md bg-blue-50 p-4;
+}
+
+.alert-warning {
+  @apply rounded-md bg-yellow-50 p-4;
+}
+
+.alert-icon-success {
+  @apply h-5 w-5 text-green-400;
+}
+
+.alert-icon-error {
+  @apply h-5 w-5 text-red-400;
+}
+
+.alert-icon-info {
+  @apply h-5 w-5 text-blue-400;
+}
+
+.alert-icon-warning {
+  @apply h-5 w-5 text-yellow-400;
+}
+
+.alert-text-success {
+  @apply text-sm font-medium text-green-800;
+}
+
+.alert-text-error {
+  @apply text-sm font-medium text-red-800;
+}
+
+.alert-text-info {
+  @apply text-sm font-medium text-blue-800;
+}
+
+.alert-text-warning {
+  @apply text-sm font-medium text-yellow-800;
+}
+
