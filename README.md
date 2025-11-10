@@ -95,6 +95,10 @@ amplify/
 - **Accounting**: Track payments and check deposits
 - **User Profiles**: Professional profile settings with signature upload
 - **Team Management**: Multi-user support with role-based permissions
+- **Multi-Factor Authentication (MFA)**: Enhanced security with TOTP-based MFA
+  - TOTP (Time-based One-Time Password) support via authenticator apps
+  - User-friendly enrollment and management in Settings
+  - See [MFA Implementation Guide](docs/MFA_IMPLEMENTATION.md) for details
 
 ## Deployment
 
