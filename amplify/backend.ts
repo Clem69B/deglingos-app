@@ -42,7 +42,7 @@ export const backend = defineBackend({
 if (isProduction) {
   console.log('🔐 Enforcing MFA for production/staging environment');
   const { cfnUserPool } = backend.auth.resources.cfnResources;
-  cfnUserPool.mfaConfiguration = 'REQUIRED';
+  cfnUserPool.mfaConfiguration = 'ON';
   cfnUserPool.enabledMfas = ['SOFTWARE_TOKEN_MFA'];
 } else {
   console.log(`⚠️  MFA is optional for environment: ${currentEnvironment}`);
