@@ -1,6 +1,6 @@
 {
   "name": "deglingos-app",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -24,6 +24,7 @@
     "i18next": "^25.2.1",
     "jspdf": "^2.5.1",
     "next": "15.3.3",
+    "qrcode": "^1.5.4",
     "react": "^19.0.0",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.0.0",
@@ -37,6 +38,7 @@
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
     "aws-cdk-lib": "^2.199.0",

@@ -18,7 +18,7 @@ import { Duration } from 'aws-cdk-lib';
 import { Schedule } from 'aws-cdk-lib/aws-events';
 
 const currentEnvironment = process.env.AMPLIFY_ENVIRONMENT || 'sandbox';
-const isProduction = currentEnvironment === 'production' || currentEnvironment === 'prod';
+const isProduction = currentEnvironment === 'production' || currentEnvironment === 'prod' || currentEnvironment === 'staging';
 
 export const backend = defineBackend({
   auth,
@@ -35,6 +35,32 @@ export const backend = defineBackend({
   downloadInvoicePdf,
   populateUserProfiles,
 });
+
+
+// =================== Cognito User Pool Client Configuration ===================
+
+// Adjust token validity periods
+const { cfnUserPoolClient } = backend.auth.resources.cfnResources;
+cfnUserPoolClient.refreshTokenValidity = 240; // in minutes
+cfnUserPoolClient.accessTokenValidity = 60; // in minutes
+cfnUserPoolClient.idTokenValidity = 60; // in minutes
+cfnUserPoolClient.tokenValidityUnits = {
+  refreshToken: 'minutes',
+  accessToken: 'minutes',
+  idToken: 'minutes'
+};
+
+// =================== MFA Configuration ===================
+
+// Enforce MFA in production and staging environments
+if (isProduction) {
+  console.log('🔐 Enforcing MFA for production/staging environment');
+  const { cfnUserPool } = backend.auth.resources.cfnResources;
+  cfnUserPool.mfaConfiguration = 'ON';
+  cfnUserPool.enabledMfas = ['SOFTWARE_TOKEN_MFA'];
+} else {
+  console.log(`⚠️  MFA is optional for environment: ${currentEnvironment}`);
+}
 
 // =================== Permissions Configuration ===================
 
