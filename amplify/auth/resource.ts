@@ -32,11 +32,5 @@ export const auth = defineAuth({
     mode: 'OPTIONAL',
     totp: true,
     sms: false,
-  },
-  senders: {
-    email: {
-      fromEmail: "noreply@deglingos.eu",
-      fromName: "Degling'OS - Gestionnaire patient"
-    }
   }
 });
