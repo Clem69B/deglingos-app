@@ -36,6 +36,20 @@ export const backend = defineBackend({
   populateUserProfiles,
 });
 
+
+// =================== Cognito User Pool Client Configuration ===================
+
+// Adjust token validity periods
+const { cfnUserPoolClient } = backend.auth.resources.cfnResources;
+cfnUserPoolClient.refreshTokenValidity = 240; // in minutes
+cfnUserPoolClient.accessTokenValidity = 60; // in minutes
+cfnUserPoolClient.idTokenValidity = 60; // in minutes
+cfnUserPoolClient.tokenValidityUnits = {
+  refreshToken: 'minutes',
+  accessToken: 'minutes',
+  idToken: 'minutes'
+};
+
 // =================== MFA Configuration ===================
 
 // Enforce MFA in production and staging environments
