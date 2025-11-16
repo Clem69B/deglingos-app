@@ -50,12 +50,17 @@ cfnUserPoolClient.tokenValidityUnits = {
   idToken: 'minutes'
 };
 
+// Disable self sign-up
+const { cfnUserPool } = backend.auth.resources.cfnResources;
+cfnUserPool.adminCreateUserConfig = {
+  allowAdminCreateUserOnly: true,
+};
+
 // =================== MFA Configuration ===================
 
 // Enforce MFA in production and staging environments
 if (isProduction) {
   console.log('🔐 Enforcing MFA for production/staging environment');
-  const { cfnUserPool } = backend.auth.resources.cfnResources;
   cfnUserPool.mfaConfiguration = 'ON';
   cfnUserPool.enabledMfas = ['SOFTWARE_TOKEN_MFA'];
 } else {
