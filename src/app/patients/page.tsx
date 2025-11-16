@@ -17,7 +17,7 @@ export default function Page() {
 
   const fetchPatients = async () => {
     const normalizedSearch = searchLastName.trim();
-    await listPatients(normalizedSearch ? { lastName: normalizedSearch, limit: 20 } : { limit: 20 });
+    await listPatients(normalizedSearch ? { lastName: normalizedSearch, limit: 200 } : { limit: 200 });
   }
 
   // Chargement initial des patients au montage du composant

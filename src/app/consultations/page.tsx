@@ -65,7 +65,7 @@ export default function ConsultationsPage() {
 
       const consultationsResponse = await client.models.Consultation.list({
         filter: Object.keys(filter).length > 0 ? filter : undefined,
-        limit: 20,
+        limit: 200,
         selectionSet: consultationSelectionSet
       });
 
