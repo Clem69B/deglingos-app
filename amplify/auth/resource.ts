@@ -32,5 +32,6 @@ export const auth = defineAuth({
     mode: 'OPTIONAL',
     totp: true,
     sms: false,
-  }
+  },
+  accountRecovery: "NONE"
 });
