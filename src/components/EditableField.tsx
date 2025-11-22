@@ -109,13 +109,7 @@ const EditableField: React.FC<EditableFieldProps> = ({
   useEffect(() => {
     setCurrentValue(value);
     setInitialValue(value);
-    // Si le composant est initialisé et n'est pas en mode édition, il n'est pas "dirty"
-    if (onDirtyStateChange && isEditingField) {
-      onDirtyStateChange(fieldName, value !== initialValue);
-    } else if (onDirtyStateChange && !isEditingField) {
-      onDirtyStateChange(fieldName, false);
-    }
-  }, [value, fieldName, initialValue, isEditingField, onDirtyStateChange]); // Dépendance à `value` uniquement pour réinitialiser si la prop `value` change de l'extérieur
+  }, [value]);
 
 
   useEffect(() => {

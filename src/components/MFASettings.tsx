@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchUserAttributes, updateMFAPreference, setUpTOTP, verifyTOTPSetup, fetchMFAPreference } from 'aws-amplify/auth';
 import QRCode from 'qrcode';
-import Image from 'next/image'
+import Image from 'next/image';
 
 interface MFAStatus {
   totpEnabled: boolean;
@@ -259,7 +259,7 @@ export default function MFASettings() {
                 </p>
                 {qrCodeUrl && (
                   <div className="flex justify-center bg-gray-50 p-4 rounded-lg">
-                    <Image src={qrCodeUrl} alt="QR Code" width={48} height={48} />
+                    <Image src={qrCodeUrl} alt="QR Code" width={256} height={256} />
                   </div>
                 )}
               </div>
