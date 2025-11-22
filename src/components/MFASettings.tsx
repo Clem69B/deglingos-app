@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchUserAttributes, updateMFAPreference, setUpTOTP, verifyTOTPSetup, fetchMFAPreference } from 'aws-amplify/auth';
 import QRCode from 'qrcode';
+import Image from 'next/image';
 
 interface MFAStatus {
   totpEnabled: boolean;
@@ -24,15 +25,15 @@ export default function MFASettings() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const attributes = await fetchUserAttributes();
       setUserEmail(attributes.email || '');
-      
+
       // Check MFA preference to see if TOTP is enabled
       try {
         const mfaPreference = await fetchMFAPreference();
         const totpEnabled = mfaPreference.preferred === 'TOTP' || mfaPreference.enabled?.includes('TOTP');
-        
+
         setMfaStatus({
           totpEnabled: totpEnabled || false,
           preferredMFA: mfaPreference.preferred,
@@ -61,9 +62,9 @@ export default function MFASettings() {
 
       const totpSetupDetails = await setUpTOTP();
       const setupUri = totpSetupDetails.getSetupUri('DeglingOS', userEmail);
-      
+
       setTotpSecret(totpSetupDetails.sharedSecret);
-      
+
       // Generate QR code
       const qrCode = await QRCode.toDataURL(setupUri.href);
       setQrCodeUrl(qrCode);
@@ -114,7 +115,7 @@ export default function MFASettings() {
       setSuccess(null);
 
       await updateMFAPreference({ totp: 'DISABLED' });
-      
+
       setSuccess('Authentification à deux facteurs désactivée');
       await loadMFAStatus();
     } catch (err) {
@@ -247,7 +248,7 @@ export default function MFASettings() {
             <h4 className="card-title mb-4">
               Configuration de l&apos;authentification à deux facteurs
             </h4>
-            
+
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-gray-700 mb-2">
@@ -258,7 +259,7 @@ export default function MFASettings() {
                 </p>
                 {qrCodeUrl && (
                   <div className="flex justify-center bg-gray-50 p-4 rounded-lg">
-                    <img src={qrCodeUrl} alt="QR Code" className="w-48 h-48" />
+                    <Image src={qrCodeUrl} alt="QR Code" width={256} height={256} />
                   </div>
                 )}
               </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { generateClient, SelectionSet } from 'aws-amplify/data';
 import type { Schema } from '../../../amplify/data/resource';
 import Link from 'next/link';
@@ -13,12 +13,12 @@ const client = generateClient<Schema>();
 
 // Selection sets pour optimiser les requêtes
 const consultationSelectionSet = [
-  'id', 
-  'date', 
-  'reason', 
+  'id',
+  'date',
+  'reason',
   'duration',
   'patientId',
-  'patient.firstName', 
+  'patient.firstName',
   'patient.lastName'
 ] as const;
 
@@ -33,21 +33,18 @@ export default function ConsultationsPage() {
   const [dateTo, setDateTo] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    fetchConsultations();
-  }, []);
-
-  const fetchConsultations = async () => {
+  const fetchConsultations = useCallback(async () => {
+    setIsLoading(true);
     try {
       // Build filter conditions
       const filter: Record<string, unknown> = {};
-      
+
       if (selectedPatient) {
         filter.patientId = { eq: selectedPatient };
       }
 
       if (dateFrom && dateTo) {
-        filter.date = { 
+        filter.date = {
           between: [dateFrom + 'T00:00:00.000Z', dateTo + 'T23:59:59.999Z']
         };
       } else if (dateFrom) {
@@ -72,7 +69,7 @@ export default function ConsultationsPage() {
       const consultationsData = handleAmplifyResponse(consultationsResponse);
       if (consultationsData) {
         // Trier par date décroissante (plus récentes en premier)
-        const sortedConsultations = [...consultationsData].sort((a, b) => 
+        const sortedConsultations = [...consultationsData].sort((a, b) =>
           new Date(b.date).getTime() - new Date(a.date).getTime()
         );
         setConsultations(sortedConsultations);
@@ -82,13 +79,11 @@ export default function ConsultationsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedPatient, dateFrom, dateTo, searchTerm, handleAmplifyResponse, setError]);
 
   useEffect(() => {
-    if (!isLoading) {
-      fetchConsultations();
-    }
-  }, [searchTerm, selectedPatient, dateFrom, dateTo]);
+    fetchConsultations();
+  }, [fetchConsultations]);
 
   const clearFilters = () => {
     setSearchTerm('');
@@ -110,7 +105,7 @@ export default function ConsultationsPage() {
   return (
     <div className="space-y-6">
       {/* Affichage des erreurs */}
-      <ErrorAlert 
+      <ErrorAlert
         error={error}
         type={errorType}
         title="Erreur de chargement"
@@ -233,8 +228,8 @@ export default function ConsultationsPage() {
         ) : consultations.length === 0 ? (
           <div className="px-4 py-12 text-center">
             <div className="text-sm text-gray-500">
-              {searchTerm || selectedPatient || dateFrom || dateTo ? 
-                'Aucune consultation trouvée pour ces critères' : 
+              {searchTerm || selectedPatient || dateFrom || dateTo ?
+                'Aucune consultation trouvée pour ces critères' :
                 'Aucune consultation enregistrée'
               }
             </div>
@@ -250,7 +245,7 @@ export default function ConsultationsPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center flex-1">
                       <div className="flex-shrink-0">
-                        <UserAvatar 
+                        <UserAvatar
                           firstName={consultation.patient?.firstName}
                           lastName={consultation.patient?.lastName}
                           size="sm"

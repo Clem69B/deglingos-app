@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useUserProfile } from '../hooks/useUserProfile';
+import Image from 'next/image';
 
 interface SignatureUploadProps {
   userId: string;
@@ -70,7 +71,7 @@ export default function SignatureUpload({
 
   const handleDelete = async () => {
     if (!currentSignatureKey) return;
-    
+
     if (confirm('Êtes-vous sûr de vouloir supprimer cette signature ?')) {
       const success = await deleteSignature(userId, currentSignatureKey);
       if (success) {
@@ -98,7 +99,7 @@ export default function SignatureUpload({
       {previewUrl ? (
         <div className="relative">
           <div className="border-2 border-gray-300 rounded-lg p-4 bg-white">
-            <img
+            <Image
               src={previewUrl}
               alt="Signature"
               className="max-h-32 mx-auto"

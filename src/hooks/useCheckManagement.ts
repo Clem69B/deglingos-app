@@ -41,11 +41,11 @@ export const useCheckManagement = ({ onError }: UseCheckManagementOptions): Chec
     }
   };
 
-  const handleError = (err: unknown) => {
+  const handleError = useCallback((err: unknown) => {
     const message = normalizeError(err);
     onError(message);
     return message;
-  };
+  }, [onError]);
 
   // Helper to resolve invoice relationships
   const _resolveInvoiceRelationships = async (invoiceModel: Schema['Invoice']['type']): Promise<CheckInvoice> => {
@@ -54,7 +54,7 @@ export const useCheckManagement = ({ onError }: UseCheckManagementOptions): Chec
     // Copy model and remove relationship accessors before returning
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { patient: _p, consultation: _c, ...rest } = invoiceModel;
-    
+
     return {
       ...rest,
       patient: patient ? {
@@ -104,7 +104,7 @@ export const useCheckManagement = ({ onError }: UseCheckManagementOptions): Chec
     } finally {
       setLoading(false);
     }
-  }, [onError]);
+  }, [onError, handleError]);
 
   // Mark checks as deposited
   const markAsDeposited = useCallback(async (invoiceIds: string[], depositDate: string) => {
@@ -112,7 +112,7 @@ export const useCheckManagement = ({ onError }: UseCheckManagementOptions): Chec
     const depositDateObj = new Date(depositDate);
     const today = new Date();
     today.setHours(23, 59, 59, 999); // End of today
-    
+
     if (depositDateObj > today) {
       const errorMsg = 'La date d\'encaissement ne peut pas être dans le futur';
       handleError(errorMsg);
@@ -150,7 +150,7 @@ export const useCheckManagement = ({ onError }: UseCheckManagementOptions): Chec
     } finally {
       setLoading(false);
     }
-  }, [onError, getUndepositedChecks]);
+  }, [onError, getUndepositedChecks, handleError]);
 
   return {
     undepositedChecks,

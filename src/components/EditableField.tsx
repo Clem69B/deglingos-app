@@ -78,12 +78,12 @@ const EditableField: React.FC<EditableFieldProps> = ({
       const element = inputRef.current;
       // Focus the element first
       element.focus();
-      
+
       // setSelectionRange only works on text-based inputs (not date, datetime-local, etc.)
       const textBasedInputTypes = ['text', 'email', 'tel', 'number'];
-      const isTextBased = element.tagName === 'TEXTAREA' || 
-                          (element.tagName === 'INPUT' && textBasedInputTypes.includes((element as HTMLInputElement).type));
-      
+      const isTextBased = element.tagName === 'TEXTAREA' ||
+        (element.tagName === 'INPUT' && textBasedInputTypes.includes((element as HTMLInputElement).type));
+
       if (isTextBased) {
         // Move cursor to the end for text-based inputs
         const length = element.value.length;
@@ -94,7 +94,7 @@ const EditableField: React.FC<EditableFieldProps> = ({
           console.debug('setSelectionRange not supported for this input type', e);
         }
       }
-      
+
       // For textareas, also scroll to the end and auto-resize
       if (element.tagName === 'TEXTAREA') {
         const textarea = element as HTMLTextAreaElement;
@@ -109,13 +109,7 @@ const EditableField: React.FC<EditableFieldProps> = ({
   useEffect(() => {
     setCurrentValue(value);
     setInitialValue(value);
-    // Si le composant est initialisé et n'est pas en mode édition, il n'est pas "dirty"
-    if (onDirtyStateChange && isEditingField) {
-        onDirtyStateChange(fieldName, value !== initialValue);
-    } else if (onDirtyStateChange && !isEditingField) {
-        onDirtyStateChange(fieldName, false);
-    }
-  }, [value]); // Dépendance à `value` uniquement pour réinitialiser si la prop `value` change de l'extérieur
+  }, [value]);
 
 
   useEffect(() => {
@@ -141,7 +135,7 @@ const EditableField: React.FC<EditableFieldProps> = ({
     if (onDirtyStateChange) {
       onDirtyStateChange(fieldName, newValue !== initialValue);
     }
-    
+
     // Auto-resize textarea
     if (e.target.tagName === 'TEXTAREA') {
       const textarea = e.target as HTMLTextAreaElement;
@@ -225,7 +219,7 @@ const EditableField: React.FC<EditableFieldProps> = ({
       id: fieldName,
       name: fieldName,
       onChange: handleValueChange,
-      onBlur: handleBlur, 
+      onBlur: handleBlur,
       className: `block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${fieldError ? 'border-red-500' : ''} ${inputClassName || ''} flex-grow`,
       placeholder: placeholder,
       'aria-invalid': !!fieldError,
@@ -275,8 +269,8 @@ const EditableField: React.FC<EditableFieldProps> = ({
       );
     } else {
       fieldElement = (
-        <input 
-          type={inputType} 
+        <input
+          type={inputType}
           {...commonProps}
           onKeyDown={handleKeyDown}
           value={formattedValue}
@@ -324,7 +318,7 @@ const EditableField: React.FC<EditableFieldProps> = ({
           className={`group mt-1 text-sm text-gray-900 ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-50'} p-2 border border-transparent ${disabled ? '' : 'hover:border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500'} rounded-md min-h-[38px] flex items-center justify-between ${displayClassName || ''}`}
           role="button"
           tabIndex={disabled ? -1 : 0}
-          onKeyDown={(e) => { if (!disabled && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setIsEditingField(true);}}}
+          onKeyDown={(e) => { if (!disabled && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setIsEditingField(true); } }}
         >
           <span className="whitespace-pre-wrap break-words flex-grow">
             {(() => {

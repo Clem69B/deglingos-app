@@ -45,13 +45,13 @@ export const useUserCache = () => {
       });
 
       const response = await client.queries.getUserDetails({ userId });
-      
+
       if (response.data) {
         const userDetails = response.data as UserDetails;
-        
+
         // Mettre en cache
         setUserCache(prev => new Map(prev).set(userId, userDetails));
-        
+
         return userDetails;
       } else {
         throw new Error('Utilisateur non trouvé');
@@ -69,7 +69,7 @@ export const useUserCache = () => {
         return newLoading;
       });
     }
-  }, [userCache]);
+  }, [userCache, loading]);
 
   const clearCache = useCallback(() => {
     setUserCache(new Map());
