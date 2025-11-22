@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useUserManagement } from '../../hooks/useUserManagement';
 import { useUserCache } from '../../hooks/useUserCache';
 import { UserName } from './';
@@ -31,22 +31,22 @@ export default function UserList({ canManageUsers, onRefresh }: UserListProps) {
   const [error, setError] = useState<string | null>(null);
   const [deletingUser, setDeletingUser] = useState<string | null>(null);
 
-  const { 
-    listUsers, 
-    deleteUser, 
-    addUserToGroup, 
-    removeUserFromGroup, 
-    loading: managementLoading 
+  const {
+    listUsers,
+    deleteUser,
+    addUserToGroup,
+    removeUserFromGroup,
+    loading: managementLoading
   } = useUserManagement();
   const { clearCache } = useUserCache();
 
   // Load users function (must be declared before useEffect)
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       setLoadingUsers(true);
       setError(null);
       console.log('🔄 Loading users list...');
-      
+
       const result = await listUsers(50); // Load up to 50 users
       if (result?.users) {
         console.log('✅ Users loaded:', result.users.length);
@@ -60,16 +60,16 @@ export default function UserList({ canManageUsers, onRefresh }: UserListProps) {
     } finally {
       setLoadingUsers(false);
     }
-  };
+  }, [listUsers]);
 
   // Load users on component mount
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [loadUsers]);
 
   const handleDeleteUser = async (userId: string, userEmail: string) => {
     const confirmMessage = `Êtes-vous sûr de vouloir supprimer l'utilisateur ${userEmail} ?\n\nCette action est irréversible.`;
-    
+
     if (!window.confirm(confirmMessage)) {
       return;
     }
@@ -77,15 +77,15 @@ export default function UserList({ canManageUsers, onRefresh }: UserListProps) {
     try {
       setDeletingUser(userId);
       console.log('🔄 Deleting user:', userId);
-      
+
       await deleteUser(userId);
-      
+
       // Remove from local state
       setUsers(prev => prev.filter(user => user.userId !== userId));
-      
+
       // Clear cache to ensure fresh data
       clearCache();
-      
+
       console.log('✅ User deleted successfully');
       onRefresh?.();
     } catch (err) {
@@ -99,7 +99,7 @@ export default function UserList({ canManageUsers, onRefresh }: UserListProps) {
   const handleGroupChange = async (userId: string, groupName: string, action: 'add' | 'remove') => {
     try {
       console.log(`🔄 ${action === 'add' ? 'Adding' : 'Removing'} user ${userId} ${action === 'add' ? 'to' : 'from'} group ${groupName}`);
-      
+
       if (action === 'add') {
         await addUserToGroup(userId, groupName);
       } else {
@@ -109,7 +109,7 @@ export default function UserList({ canManageUsers, onRefresh }: UserListProps) {
       // Update local state
       setUsers(prev => prev.map(user => {
         if (user.userId === userId) {
-          const newGroups = action === 'add' 
+          const newGroups = action === 'add'
             ? [...user.groups, groupName]
             : user.groups.filter(g => g !== groupName);
           return { ...user, groups: newGroups };
@@ -119,7 +119,7 @@ export default function UserList({ canManageUsers, onRefresh }: UserListProps) {
 
       // Clear cache to ensure fresh data
       clearCache();
-      
+
       console.log('✅ Group change successful');
     } catch (err) {
       console.error('❌ Error changing user group:', err);

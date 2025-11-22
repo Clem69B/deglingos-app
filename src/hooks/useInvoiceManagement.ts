@@ -48,18 +48,18 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
   };
 
   // Helper to consistently handle errors: normalize -> call onError or set local state
-  const handleError = (err: unknown) => {
+  const handleError = useCallback((err: unknown) => {
     const message = normalizeError(err);
     onError(message);
     return message;
-  };
+  }, [onError]);
 
   const listInvoices = useCallback(async (filter?: { patientId: string }) => {
     setLoading(true);
     onError('');
     try {
       // Use selectionSet to fetch related patient data in a single query
-      const { data, errors } = await client.models.Invoice.list({ 
+      const { data, errors } = await client.models.Invoice.list({
         filter: filter ? { patientId: { eq: filter.patientId } } : undefined,
         selectionSet: [
           "id", "invoiceNumber", "date", "total", "status", "isPaid",
@@ -75,7 +75,7 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
     } finally {
       setLoading(false);
     }
-  }, [onError]);
+  }, [onError, handleError]);
 
   const getInvoiceById = useCallback(async (id: string) => {
     setLoading(true);
@@ -84,7 +84,7 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
       const { data, errors } = await client.models.Invoice.get({ id });
       if (errors) throw errors;
       if (!data) throw new Error("Invoice not found.");
-      
+
       const fullInvoiceData = await _resolveInvoiceRelationships(data);
       setInvoice(fullInvoiceData);
       return fullInvoiceData;
@@ -95,7 +95,7 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
     } finally {
       setLoading(false);
     }
-  }, [onError]);
+  }, [onError, handleError]);
 
   const createInvoice = async (input: CreateInvoiceInput): Promise<Invoice | null> => {
     setLoading(true);
@@ -113,7 +113,7 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
       const { data, errors } = await client.models.Invoice.create(safeInput);
       if (errors) throw errors;
       if (!data) return null;
-      
+
       return await _resolveInvoiceRelationships(data);
     } catch (err) {
       handleError(err);
@@ -281,12 +281,12 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
         isPaid: true,
         paidAt,
       };
-      
+
       // Initialize isDeposited for checks
       if (invoice.paymentMethod === 'CHECK') {
         updateData.isDeposited = false;
       }
-      
+
       const result = await updateInvoice(updateData);
       if (!result) throw new Error('Update failed');
       updateLocalCaches(result);
@@ -337,13 +337,13 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
     try {
       const { data, errors } = await client.mutations.generateInvoicePDF({ invoiceId: id });
       if (errors) throw errors;
-      
+
       const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
       const result = parsedData as { success: boolean; pdfUrl?: string; message: string };
       if (!result.success) {
         throw new Error(`PDF generation failed: ${result.message}`);
       }
-      
+
       return result.pdfUrl || null;
     } catch (err) {
       handleError(err);
@@ -363,7 +363,7 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
       if (!result.success) {
         throw new Error(`PDF download failed: ${result.message}`);
       }
-      
+
       if (result.downloadUrl) {
         // Trigger browser download
         const link = document.createElement('a');
@@ -385,7 +385,7 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
     try {
       // Get current invoice without triggering loading state change
       let current = invoice;
-      
+
       // Only fetch if we don't have the invoice or it's a different one
       if (!current || current.id !== id) {
         const { data, errors } = await client.models.Invoice.get({ id });
@@ -398,12 +398,12 @@ const useInvoiceManagement = ({ onError }: UseInvoiceManagementOptions) => {
       if (!email) throw new Error('No patient email found for this invoice');
 
       // Call GraphQL mutation to send email with PDF
-      const { data, errors } = await client.mutations.sendInvoiceEmail({ 
+      const { data, errors } = await client.mutations.sendInvoiceEmail({
         invoiceId: id,
-        recipientEmail: email 
+        recipientEmail: email
       });
       if (errors) throw errors;
-      
+
       const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
       const result = parsedData as { success: boolean; message: string };
       if (!result.success) {

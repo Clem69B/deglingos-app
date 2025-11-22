@@ -30,23 +30,23 @@ const usePatientManagement = ({ onError }: UsePatientManagementOptions) => {
     }
   };
 
-  const handleError = (err: unknown) => {
+  const handleError = useCallback((err: unknown) => {
     const message = normalizeError(err);
     onError(message);
     return message;
-  };
+  }, [onError]);
 
   const listPatients = useCallback(async (filter?: { lastName?: string; limit?: number }) => {
     setLoading(true);
     onError('');
     try {
-      const graphQLFilter = filter?.lastName 
+      const graphQLFilter = filter?.lastName
         ? {
-            or: [
-              { lastName: { contains: filter.lastName } },
-              { lastName: { contains: filter.lastName.charAt(0).toUpperCase() + filter.lastName.slice(1).toLowerCase() } },
-            ],
-          }
+          or: [
+            { lastName: { contains: filter.lastName } },
+            { lastName: { contains: filter.lastName.charAt(0).toUpperCase() + filter.lastName.slice(1).toLowerCase() } },
+          ],
+        }
         : undefined;
 
       const { data, errors } = await client.models.Patient.list({
@@ -65,7 +65,7 @@ const usePatientManagement = ({ onError }: UsePatientManagementOptions) => {
     } finally {
       setLoading(false);
     }
-  }, [onError]);
+  }, [onError, handleError]);
 
   const getPatientById = useCallback(async (id: string) => {
     setLoading(true);
@@ -74,7 +74,7 @@ const usePatientManagement = ({ onError }: UsePatientManagementOptions) => {
       const { data, errors } = await client.models.Patient.get({ id });
       if (errors) throw errors;
       if (!data) throw new Error('Patient not found.');
-      
+
       setPatient(data as PatientDetail);
       return data as PatientDetail;
     } catch (err) {
@@ -84,7 +84,7 @@ const usePatientManagement = ({ onError }: UsePatientManagementOptions) => {
     } finally {
       setLoading(false);
     }
-  }, [onError]);
+  }, [onError, handleError]);
 
   const createPatient = async (input: CreatePatientInput): Promise<PatientDetail | null> => {
     setLoading(true);
@@ -93,7 +93,7 @@ const usePatientManagement = ({ onError }: UsePatientManagementOptions) => {
       const { data, errors } = await client.models.Patient.create(input);
       if (errors) throw errors;
       if (!data) return null;
-      
+
       return data as PatientDetail;
     } catch (err) {
       handleError(err);
@@ -177,19 +177,19 @@ const usePatientManagement = ({ onError }: UsePatientManagementOptions) => {
 
     try {
       let processedValue = value;
-      
+
       // Trim string values
       if (typeof value === 'string') {
         processedValue = value.trim();
       }
-      
+
       // Set empty optional fields to null
       const optionalFields = [
-        'email', 'phone', 'dateOfBirth', 'address', 'city', 'postalCode', 
-        'gender', 'profession', 'referringPhysician', 'medicalHistory', 
+        'email', 'phone', 'dateOfBirth', 'address', 'city', 'postalCode',
+        'gender', 'profession', 'referringPhysician', 'medicalHistory',
         'surgicalHistory', 'currentMedications', 'activities'
       ];
-      
+
       if (processedValue === '' && optionalFields.includes(fieldName)) {
         processedValue = null;
       }

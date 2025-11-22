@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export interface ErrorAlertProps {
   /** L'erreur à afficher - peut être une chaîne, un objet Error, ou un tableau d'erreurs Amplify */
@@ -36,21 +36,26 @@ export default function ErrorAlert({
   // Fonction pour extraire le message d'erreur
   const getErrorMessage = (error: ErrorAlertProps['error']): string => {
     if (!error) return '';
-    
+
     if (typeof error === 'string') {
       return error;
     }
-    
+
     if (error instanceof Error) {
       return error.message;
     }
-    
+
     if (Array.isArray(error)) {
       return error.map(e => e.message).join(', ');
     }
-    
+
     return 'Une erreur inattendue s\'est produite.';
   };
+
+  const handleClose = useCallback(() => {
+    setIsVisible(false);
+    onClose?.();
+  }, [onClose]);
 
   // Remettre l'alerte visible quand une nouvelle erreur arrive
   useEffect(() => {
@@ -68,12 +73,7 @@ export default function ErrorAlert({
 
       return () => clearTimeout(timer);
     }
-  }, [autoClose, autoCloseDelay, error]);
-
-  const handleClose = () => {
-    setIsVisible(false);
-    onClose?.();
-  };
+  }, [autoClose, autoCloseDelay, error, handleClose]);
 
   // Ne rien afficher si pas d'erreur ou si fermé
   if (!error || !isVisible) {

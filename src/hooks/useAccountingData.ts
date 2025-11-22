@@ -30,22 +30,22 @@ export const useAccountingData = ({ onError }: UseAccountingDataOptions) => {
     }
   };
 
-  const handleError = (err: unknown) => {
+  const handleError = useCallback((err: unknown) => {
     const message = normalizeError(err);
     onError(message);
     return message;
-  };
+  }, [onError]);
 
   // Get monthly revenue for the last N months
   const getMonthlyRevenue = useCallback(async (monthsBack: number = 6) => {
     setLoading(true);
     onError('');
-    
+
     try {
       // Calculate date range - last N months including current month
       const endDate = new Date();
       const startDate = startOfMonth(subMonths(endDate, monthsBack - 1));
-      
+
       // Format dates for GraphQL filter (ISO datetime strings)
       const startDateStr = startDate.toISOString();
       const endDateStr = endDate.toISOString();
@@ -70,23 +70,23 @@ export const useAccountingData = ({ onError }: UseAccountingDataOptions) => {
         if (!invoice.paidAt || !invoice.total) return;
 
         // Handle paidAt which could be a string or Date
-        const paidAtDate = typeof invoice.paidAt === 'string' 
-          ? new Date(invoice.paidAt) 
+        const paidAtDate = typeof invoice.paidAt === 'string'
+          ? new Date(invoice.paidAt)
           : invoice.paidAt;
         const month = format(paidAtDate, 'yyyy-MM');
-        
+
         if (!aggregated[month]) {
           aggregated[month] = {
-              month,
-              total: 0,
-              paymentMethods: {
-                CHECK: 0,
-                BANK_TRANSFER: 0,
-                CASH: 0,
-                CARD: 0,
-              },
-              invoiceCount: 0,
-            };
+            month,
+            total: 0,
+            paymentMethods: {
+              CHECK: 0,
+              BANK_TRANSFER: 0,
+              CASH: 0,
+              CARD: 0,
+            },
+            invoiceCount: 0,
+          };
         }
 
         aggregated[month].total += invoice.total;
@@ -99,7 +99,7 @@ export const useAccountingData = ({ onError }: UseAccountingDataOptions) => {
       });
 
       // Convert to array and sort by month (oldest to newest)
-      const monthlyArray = Object.values(aggregated).sort((a, b) => 
+      const monthlyArray = Object.values(aggregated).sort((a, b) =>
         a.month.localeCompare(b.month)
       );
 
@@ -108,7 +108,7 @@ export const useAccountingData = ({ onError }: UseAccountingDataOptions) => {
       for (let i = 0; i < monthsBack; i++) {
         const monthDate = startOfMonth(subMonths(endDate, monthsBack - 1 - i));
         const monthKey = format(monthDate, 'yyyy-MM');
-        
+
         const existing = monthlyArray.find(m => m.month === monthKey);
         if (existing) {
           filledData.push(existing);
@@ -134,7 +134,7 @@ export const useAccountingData = ({ onError }: UseAccountingDataOptions) => {
     } finally {
       setLoading(false);
     }
-  }, [onError]);
+  }, [onError, handleError]);
 
   // Get current month revenue data
   const getCurrentMonthRevenue = useCallback((): MonthlyRevenue | null => {
